@@ -45,7 +45,7 @@ public class RingImpactTrail : MonoBehaviour
 
     private void OnTriggerStay(Collider other)
     {
-        Debug.Log("triggered "+other.name);
+        if (other.transform.parent == transform.parent) return;
         if (other.transform == wire)
         {
             Debug.Log("inside");

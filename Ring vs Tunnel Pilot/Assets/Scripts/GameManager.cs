@@ -52,7 +52,6 @@ public class GameManager : MonoBehaviour
 
     public void OnFinishTraversing()
     {
-        Debug.Log("outt");
         if (isTraversingWire)
         {
             Debug.Log("Ring entered the end collider of the current wire.");
