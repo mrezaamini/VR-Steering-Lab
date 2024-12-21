@@ -4,11 +4,28 @@ using UnityEngine;
 public class GameManager : MonoBehaviour
 {
     // participant based variables
+    public int participantID;
     public bool rightHanded;
-    // condition management
-    public GameObject wire_prefab;
-    public GameObject ring_prefab;
-    public List<Vector2> conditions = new List<Vector2> // L (wire), W (ring diameter), wire diameter is fixed to 0.01 m
+    private List<(Vector2, Quaternion)> participantTrials;
+    public GameObject wirePrefab;
+    [SerializeField] private List<GameObject> ringPrefabs; // contains 3 different rings of experiment
+    private Vector3 targetPosition;
+
+
+
+    // for single condition
+
+    public int currentTrial = 0;
+
+    [SerializeField] private List<GameObject> wires;
+   
+    private GameObject currentWire;
+    private GameObject currentRing;
+    private HashSet<GameObject> visitedWires = new HashSet<GameObject>();
+    private bool isTraversingWire = false;
+
+    // Task Conditions
+    public List<Vector2> indexOfDiffs = new List<Vector2> // L (wire), W (ring diameter), wire diameter is fixed to 0.01 m
     {
         new Vector2(0.20f, 0.02f),
         new Vector2(0.20f, 0.04f),
@@ -18,26 +35,10 @@ public class GameManager : MonoBehaviour
         new Vector2(0.25f, 0.08f),
         new Vector2(0.35f, 0.02f),
         new Vector2(0.35f, 0.04f),
-        new Vector2(0.35f, 0.08f),
-        new Vector2(0.50f, 0.02f),
-        new Vector2(0.50f, 0.04f),
-        new Vector2(0.50f, 0.08f)
+        new Vector2(0.35f, 0.08f)
     };
 
-
-    // for single condition
-    [SerializeField] private List<GameObject> wires; 
-    private GameObject currentWire;
-    private HashSet<GameObject> visitedWires = new HashSet<GameObject>();
-    private bool isTraversingWire = false;
-
-    // positions and rotations in each condition
-    private Vector3[] wirePositions = { // TODO update based on right hand and left hand conditions near shoulder and position of eyelevel near shoulder
-        new Vector3(0.5f, 1.0f, 3.23f), // right hand
-        new Vector3(0.5f, 1.0f, 3.23f) // left hand
-    };
-
-    private Quaternion[] wireRotations = {
+    private List<Quaternion> wireRotations = new List<Quaternion> { 
         // z-plane
         Quaternion.Euler(0, 0, 0),
         Quaternion.Euler(0, 0, 45),
@@ -71,12 +72,128 @@ public class GameManager : MonoBehaviour
         Quaternion.Euler(0, 315, 135)
     };
 
-
-
-
     void Start()
     {
-        ActivateRandomWire(); 
+        participantTrials = GenerateParticipantTrial(participantID); //TODO: update numbers based on shoulder and eye level
+        if (rightHanded)
+        {
+            targetPosition = new Vector3(0.158f, 1.1f, 3.2f); // right handed participant
+        }
+        else
+        {
+            targetPosition = new Vector3(0.5f, 1.0f, 3.23f); // left handed participant
+        }
+        Debug.Log($"Trials initialized: {participantTrials?.Count ?? 0} trials created.");
+        NextTrial();
+        //ActivateRandomWire();
+    }
+
+
+    void Update()
+    {
+        // for debug: with space we move to next trial
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            EndTrial();
+        }
+    }
+
+
+    public void NextTrial()
+    {
+        if (currentTrial >= participantTrials.Count)
+        {
+            Debug.Log("All trials completed for participant.");
+            return;
+        }
+
+        //Decompose trial condition
+        (Vector2 id, Quaternion rotation) = participantTrials[currentTrial];
+        float len = id.x;
+        float width = id.y;
+
+        // create wire
+        currentWire = Instantiate(wirePrefab, targetPosition, rotation);
+        currentWire.transform.localScale = new Vector3(0.01f, len, 0.01f);
+
+        //create ring
+        Vector3 wireForward = currentWire.transform.up;
+        //Vector3 wireRight = currentWire.transform.right;
+        float ringOffset = len+0.05f;
+        Vector3 ringPosition = targetPosition - ringOffset * wireForward;
+        currentRing = Instantiate(SelectRingPrefab(width), ringPosition, rotation);
+        currentRing.transform.forward = currentWire.transform.up; // to overcome problem regarding orientation of the ring-to be prependicular to wire
+        Debug.Log($"Trial {currentTrial + 1} started: L = {len}, W = {width}, Rotation = {rotation.eulerAngles}");
+    }
+
+    public void EndTrial() // to end a trial and move to the next one
+    {
+
+        isTraversingWire = false;
+        // destroy previous trial objects
+        if (currentRing != null) Destroy(currentRing);
+        if (currentWire != null) Destroy(currentWire);
+
+        Debug.Log("OBJ deleted");
+
+        currentTrial++;
+
+        NextTrial();
+
+    }
+
+    GameObject SelectRingPrefab(float W)
+    {
+        GameObject selectedRingPrefab = null;
+
+        switch (W)
+        {
+            case 0.02f:
+                selectedRingPrefab = ringPrefabs[0];
+                break;
+            case 0.04f:
+                selectedRingPrefab = ringPrefabs[1];
+                break;
+            case 0.08f:
+                selectedRingPrefab = ringPrefabs[2];
+                break;
+            default:
+                Debug.LogError("No ring prefab for W: " + W);
+                break;
+        }
+
+        return selectedRingPrefab;
+    }
+
+
+
+    List<Quaternion> CounterBalanceRotations(int participantId) // Generate latin square of rotations for counter balancing rotations
+    {
+        List<Quaternion> rotationOrder = new List<Quaternion>();
+        for (int i = 0; i < wireRotations.Count; i++)
+        {
+            int index = (i + participantId) % wireRotations.Count;
+            rotationOrder.Add(wireRotations[index]);
+        }
+
+        return rotationOrder;
+    }
+
+    public List<(Vector2, Quaternion)> GenerateParticipantTrial(int participantId) // generate the trial conditions for specific participant (tuple of ID and rotations)
+    {
+        int normalizedPID = (participantId - 1) % 26; // make it 0 to 25
+        List<Quaternion> participantRotations = CounterBalanceRotations(normalizedPID);
+
+        List<(Vector2, Quaternion)> trials = new List<(Vector2, Quaternion)>();
+        foreach (Vector2 id in indexOfDiffs)
+        {
+            foreach (Quaternion rotation in participantRotations)
+            {
+                trials.Add((id, rotation));
+            }
+        }
+
+        return trials;
     }
 
 
@@ -102,6 +219,7 @@ public class GameManager : MonoBehaviour
     public void OnStartTraversing()
     {
         Debug.Log("traversing started");
+
         isTraversingWire = true;
     }
 
@@ -113,16 +231,16 @@ public class GameManager : MonoBehaviour
     //    }
     //}
 
-    public void OnFinishTraversing()
-    {
-        if (isTraversingWire)
-        {
-            Debug.Log("Ring entered the end collider of the current wire.");
-            currentWire.SetActive(false); // Deactivate the current wire
-            isTraversingWire = false;
-            ActivateRandomWire(); // Activate a new random wire
-        }
-    }
+    //public void OnFinishTraversing()
+    //{
+    //    if (isTraversingWire)
+    //    {
+    //        Debug.Log("Ring entered the end collider of the current wire.");
+    //        currentWire.SetActive(false); // Deactivate the current wire
+    //        isTraversingWire = false;
+    //        ActivateRandomWire(); // Activate a new random wire
+    //    }
+    //}
 
     public void OnFailTraversing(GameObject wire) // going out of bounds while traversing
     {
