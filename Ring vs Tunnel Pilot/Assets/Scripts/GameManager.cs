@@ -3,6 +3,11 @@ using UnityEngine;
 
 public class GameManager : MonoBehaviour
 {
+    //TO CHANGE: just for visualizing the hit point
+    public GameObject dotPrefab; 
+    private GameObject currentDot;
+    public DebugText debugText;
+
     // participant based variables
     public int participantID;
     public bool rightHanded;
@@ -10,6 +15,7 @@ public class GameManager : MonoBehaviour
     public GameObject wirePrefab;
     [SerializeField] private List<GameObject> ringPrefabs; // contains 3 different rings of experiment
     private Vector3 targetPosition;
+    
 
 
 
@@ -96,6 +102,10 @@ public class GameManager : MonoBehaviour
         {
             EndTrial();
         }
+        if (isTraversingWire)
+        {
+            OnTraversingTracking();
+        }
     }
 
 
@@ -166,7 +176,6 @@ public class GameManager : MonoBehaviour
     }
 
 
-
     List<Quaternion> CounterBalanceRotations(int participantId) // Generate latin square of rotations for counter balancing rotations
     {
         List<Quaternion> rotationOrder = new List<Quaternion>();
@@ -223,24 +232,101 @@ public class GameManager : MonoBehaviour
         isTraversingWire = true;
     }
 
-    //public void OnTraversing(GameObject wire)
-    //{
-    //    if (wire == currentWire && isTraversingWire)
-    //    {
-    //        Debug.Log("Ring is traversing the wire.");
-    //    }
-    //}
+    private void OnTraversingTracking()
+    {
+        Vector3 wireCenter = currentWire.transform.position;
+        Vector3 ringPlaneNormal = currentRing.transform.forward;
+        Vector3 ringCenter = currentRing.transform.position;
 
-    //public void OnFinishTraversing()
-    //{
-    //    if (isTraversingWire)
-    //    {
-    //        Debug.Log("Ring entered the end collider of the current wire.");
-    //        currentWire.SetActive(false); // Deactivate the current wire
-    //        isTraversingWire = false;
-    //        ActivateRandomWire(); // Activate a new random wire
-    //    }
-    //}
+        Vector3 wireRayStartPos = GetWireStartPoint().position;
+        Ray wireRay = new Ray(wireRayStartPos, currentWire.transform.up);
+        Plane ringPlane = new Plane(ringPlaneNormal, ringCenter);
+        Vector3 intersectionPoint;
+        if (ringPlane.Raycast(wireRay, out float intr))
+        {
+            intersectionPoint = wireRay.GetPoint(intr);
+            Vector3 localIntersection = intersectionPoint - ringCenter;
+            float x = Vector3.Dot(localIntersection, currentRing.transform.right);
+            float y = Vector3.Dot(localIntersection, currentRing.transform.up);
+
+            debugText.updateText("x: " + x + " / y: "+ y);
+            // DEBUG: showing sphere on the intersection
+            if (currentDot == null)
+            {
+                currentDot = Instantiate(dotPrefab, intersectionPoint, Quaternion.identity);
+                currentDot.transform.localScale = new Vector3(0.015f, 0.015f, 0.015f); // Set the size to 0.2 diameter
+            }
+            else
+            {
+                currentDot.transform.position = intersectionPoint;
+            }
+            //////////
+        }
+        else
+        { 
+            debugText.updateText("no intersection found"); 
+        }
+
+    }
+
+    private Transform GetWireStartPoint()
+    {
+        Transform[] children = currentWire.GetComponentsInChildren<Transform>(true);
+        Transform startPoint = null;
+
+        foreach (Transform child in children)
+        {
+            if (child.CompareTag("StartPoint"))
+            {
+                startPoint = child;
+                break;
+            }
+        }
+        if (startPoint == null)
+        {
+            Debug.Log("No child with the specified tag found.");
+        }
+        return startPoint;
+    }
+
+    private void OnDrawGizmos()
+    {
+        if (currentWire == null || currentRing == null) return;
+
+        // Get the ring's plane normal and center
+        Vector3 ringPlaneNormal = currentRing.transform.forward; // Or adjust based on your orientation
+        Vector3 ringCenter = currentRing.transform.position;
+
+        // Visualize the plane with Gizmos
+        DrawPlaneGizmo(ringCenter, ringPlaneNormal, 5f, 5f); // 5x5 plane size
+    }
+
+    private void DrawPlaneGizmo(Vector3 center, Vector3 normal, float width, float height)
+    {
+        Gizmos.color = Color.cyan;
+
+        // Calculate plane corners
+        Vector3 right = Vector3.Cross(normal, Vector3.up).normalized;
+        if (right == Vector3.zero) right = Vector3.Cross(normal, Vector3.forward).normalized;
+
+        Vector3 forward = Vector3.Cross(normal, right);
+
+        Vector3 topLeft = center + (-right * width / 2) + (forward * height / 2);
+        Vector3 topRight = center + (right * width / 2) + (forward * height / 2);
+        Vector3 bottomLeft = center + (-right * width / 2) + (-forward * height / 2);
+        Vector3 bottomRight = center + (right * width / 2) + (-forward * height / 2);
+
+        // Draw the plane as a rectangle
+        Gizmos.DrawLine(topLeft, topRight);
+        Gizmos.DrawLine(topRight, bottomRight);
+        Gizmos.DrawLine(bottomRight, bottomLeft);
+        Gizmos.DrawLine(bottomLeft, topLeft);
+
+        // Draw the normal direction
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawLine(center, center + normal * 2f); // Normal line (scaled for visibility)
+    }
+    
 
     public void OnFailTraversing(GameObject wire) // going out of bounds while traversing
     {

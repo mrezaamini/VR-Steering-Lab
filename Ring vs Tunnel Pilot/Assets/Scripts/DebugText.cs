@@ -11,9 +11,10 @@ public class DebugText : MonoBehaviour
        
     }
 
-    // Update is called once per frame
-    void Update()
+    public void updateText (string input)
     {
-        debugText.text = $"time: {Time.time}";
+        debugText.text = input;
     }
+
+   
 }
