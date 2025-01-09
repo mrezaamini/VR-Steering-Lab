@@ -1,3 +1,4 @@
+using System.IO;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -15,8 +16,12 @@ public class GameManager : MonoBehaviour
     public GameObject wirePrefab;
     [SerializeField] private List<GameObject> ringPrefabs; // contains 3 different rings of experiment
     private Vector3 targetPosition;
-    
 
+    // for saving tracking information
+    private string trackingOutputFile;
+    private float trialW;
+    private float trialL;
+    private Quaternion trialR;
 
 
     // for single condition
@@ -134,6 +139,34 @@ public class GameManager : MonoBehaviour
         currentRing = Instantiate(SelectRingPrefab(width), ringPosition, rotation);
         currentRing.transform.forward = currentWire.transform.up; // to overcome problem regarding orientation of the ring-to be prependicular to wire
         Debug.Log($"Trial {currentTrial + 1} started: L = {len}, W = {width}, Rotation = {rotation.eulerAngles}");
+
+        //saving tracking information as output for each trial
+        string trackingOutputPath = Path.Combine(Application.dataPath, "CapturedData");
+        string trackingOutputName = $"P{participantID}_T{currentTrial + 1}_wireTrack.csv";
+        trackingOutputFile = Path.Combine(trackingOutputPath, trackingOutputName);
+        if (!Directory.Exists(trackingOutputPath))
+        {
+            Debug.Log("Directory Not Found!! created new one");
+            Directory.CreateDirectory(trackingOutputPath);
+        }
+        if (!File.Exists(trackingOutputFile))
+        {
+            File.WriteAllText(trackingOutputFile, "PID,rightHanded,width,length,rotationX,rotationY,rotationZ,PositionX,PositionY\n");
+        }
+        else
+        {
+            Debug.Log("WARNING: file already exists, overwritting!");
+        }
+        //update trial info for saving tracking info in output file
+        trialL = len;
+        trialR = rotation;
+        trialW = width;
+    }
+
+    private void SaveWireTrack(float x, float y)
+    {
+        string newData = $"{participantID},{rightHanded},{trialW},{trialL},{trialR.x},{trialR.y},{trialR.z},{x},{y}\n";
+        File.AppendAllText(trackingOutputFile, newData);
     }
 
     public void EndTrial() // to end a trial and move to the next one
@@ -205,7 +238,6 @@ public class GameManager : MonoBehaviour
         return trials;
     }
 
-
     private void ActivateRandomWire()
     {
         
@@ -234,7 +266,6 @@ public class GameManager : MonoBehaviour
 
     private void OnTraversingTracking()
     {
-        Vector3 wireCenter = currentWire.transform.position;
         Vector3 ringPlaneNormal = currentRing.transform.forward;
         Vector3 ringCenter = currentRing.transform.position;
 
@@ -250,6 +281,8 @@ public class GameManager : MonoBehaviour
             float y = Vector3.Dot(localIntersection, currentRing.transform.up);
 
             debugText.updateText("x: " + x + " / y: "+ y);
+            //saving tracking info to file
+            SaveWireTrack(x, y);
             // DEBUG: showing sphere on the intersection
             if (currentDot == null)
             {
