@@ -5,13 +5,13 @@ using UnityEngine;
 public class GameManager : MonoBehaviour
 {
     //TO CHANGE: just for visualizing the hit point
-    public GameObject dotPrefab; 
-    private GameObject currentDot;
+    //public GameObject dotPrefab; 
+    //private GameObject currentDot;
     public DebugText debugText;
 
     // participant based variables
     public int participantID;
-    public bool rightHanded;
+    //public bool rightHanded;
     private List<(Vector2, Quaternion)> participantTrials;
     public GameObject wirePrefab;
     [SerializeField] private List<GameObject> ringPrefabs; // contains 3 different rings of experiment
@@ -38,15 +38,10 @@ public class GameManager : MonoBehaviour
     // Task Conditions
     public List<Vector2> indexOfDiffs = new List<Vector2> // L (wire), W (ring diameter), wire diameter is fixed to 0.01 m
     {
-        new Vector2(0.20f, 0.02f),
         new Vector2(0.20f, 0.04f),
         new Vector2(0.20f, 0.08f),
-        new Vector2(0.25f, 0.02f),
-        new Vector2(0.25f, 0.04f),
-        new Vector2(0.25f, 0.08f),
-        new Vector2(0.35f, 0.02f),
-        new Vector2(0.35f, 0.04f),
-        new Vector2(0.35f, 0.08f)
+        new Vector2(0.30f, 0.04f),
+        new Vector2(0.30f, 0.08f)
     };
 
     private List<Quaternion> wireRotations = new List<Quaternion> { 
@@ -83,17 +78,30 @@ public class GameManager : MonoBehaviour
         Quaternion.Euler(0, 315, 135)
     };
 
+    private int[,] placements =
+    {
+        {1,2,3},
+        {2,3,1},
+        {3,1,2}
+    };
+
     void Start()
     {
         participantTrials = GenerateParticipantTrial(participantID); //TODO: update numbers based on shoulder and eye level
-        if (rightHanded)
-        {
-            targetPosition = new Vector3(0.158f, 1.1f, 3.2f); // right handed participant
-        }
-        else
-        {
-            targetPosition = new Vector3(0.5f, 1.0f, 3.23f); // left handed participant
-        }
+
+        //TODO get the hmd position for generating position trials
+        targetPosition = new Vector3(0.158f, 1.1f, 3.2f);
+
+
+
+        //if (rightHanded)
+        //{
+        //    targetPosition = new Vector3(0.158f, 1.1f, 3.2f); // right handed participant
+        //}
+        //else
+        //{
+        //    targetPosition = new Vector3(0.5f, 1.0f, 3.23f); // left handed participant
+        //}
         Debug.Log($"Trials initialized: {participantTrials?.Count ?? 0} trials created.");
         NextTrial();
         //ActivateRandomWire();
@@ -238,25 +246,6 @@ public class GameManager : MonoBehaviour
         return trials;
     }
 
-    private void ActivateRandomWire()
-    {
-        
-        List<GameObject> unvisitedWires = wires.FindAll(wire => !visitedWires.Contains(wire));
-
-        if (unvisitedWires.Count > 0)
-        {
-            currentWire = unvisitedWires[Random.Range(0, unvisitedWires.Count)]; // Choose a random unvisited wire
-            currentWire.SetActive(true); // Activate the selected wire
-            visitedWires.Add(currentWire); // Mark this wire as visited
-        }
-        else
-        {
-            Debug.Log("All wires have been visited. Restarting wire visit tracking.");
-            visitedWires.Clear(); // Clear the visited wires to allow re-selection
-            ActivateRandomWire(); // Re-activate a random wire
-        }
-    }
-
     public void OnStartTraversing()
     {
         Debug.Log("traversing started");
@@ -283,17 +272,6 @@ public class GameManager : MonoBehaviour
             debugText.updateText("x: " + x + " / y: "+ y);
             //saving tracking info to file
             SaveWireTrack(x, y);
-            // DEBUG: showing sphere on the intersection
-            if (currentDot == null)
-            {
-                currentDot = Instantiate(dotPrefab, intersectionPoint, Quaternion.identity);
-                currentDot.transform.localScale = new Vector3(0.015f, 0.015f, 0.015f); // Set the size to 0.2 diameter
-            }
-            else
-            {
-                currentDot.transform.position = intersectionPoint;
-            }
-            //////////
         }
         else
         { 
@@ -363,7 +341,7 @@ public class GameManager : MonoBehaviour
 
     public void OnFailTraversing(GameObject wire) // going out of bounds while traversing
     {
-        // TODO
+        // TODO: redo trial
     }
 }
 
