@@ -11,7 +11,7 @@ public class GameManager : MonoBehaviour
 
     // participant based variables
     public int participantID;
-    //public bool rightHanded;
+    public bool rightHanded;
     private List<(Vector2, Quaternion)> participantTrials;
     public GameObject wirePrefab;
     [SerializeField] private List<GameObject> ringPrefabs; // contains 3 different rings of experiment
