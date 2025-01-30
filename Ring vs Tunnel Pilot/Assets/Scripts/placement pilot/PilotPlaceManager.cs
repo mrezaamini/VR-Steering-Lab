@@ -7,7 +7,7 @@ public class PilotPlaceManager : MonoBehaviour
 {
     [Header("Participant Info")]
     public int participantID;
-    public bool shoulderBreadth; // true: long, false: short
+    public bool isMale; // true: long, false: short for shoulder breadth
     public bool isRightHanded;
 
     [Header("Game Objects")]
@@ -16,7 +16,9 @@ public class PilotPlaceManager : MonoBehaviour
     [SerializeField] private List<GameObject> ringPrefabs;
     private Vector3 targetPosition;
 
-    
+
+    public DebugText debugText;
+
 
 
     private string trackingOutputFile;
@@ -37,8 +39,8 @@ public class PilotPlaceManager : MonoBehaviour
     {
         new Vector2(0.20f, 0.04f),
         new Vector2(0.20f, 0.08f),
-        new Vector2(0.30f, 0.04f),
-        new Vector2(0.30f, 0.08f)
+        //new Vector2(0.30f, 0.04f),
+        //new Vector2(0.30f, 0.08f)
     };
 
     private List<Quaternion> wireRotations = new List<Quaternion> { 
@@ -51,17 +53,28 @@ public class PilotPlaceManager : MonoBehaviour
         Quaternion.Euler(270, 0, 0),
     };
 
-    private List<float> lateralOffsets = new List<float> { -0.2f, 0.0f, 0.2f };
+    private float[] placements = { -1f, 0f, 1f }; // it will be multiplied by the lateral offset in code for generating placement conditions
+
     private Vector3 scenePosition;
+    private float lateralOffset;
 
     //private GameObject sphere;
     private GameObject mainCamera;
 
-    private bool calibrationStatus = true; //IT SHOULD BE FALSE
+    private bool calibrationStatus = false; //should be false at start
     public GameObject startButton;
 
 
-    private List<(Vector2, Quaternion)> participantTrials;
+    private List<(float, Vector2, Quaternion)> participantTrials;
+
+    //hand material swap
+    [SerializeField] private Material invisibleHand_material;
+    [SerializeField] private Material originalHand_material;
+    [SerializeField] private GameObject rightHandObject;
+    [SerializeField] private GameObject leftHandObject;
+    private SkinnedMeshRenderer mainHand_skin;
+
+
 
     // Start is called before the first frame update
     void Start()
@@ -69,7 +82,16 @@ public class PilotPlaceManager : MonoBehaviour
         mainCamera = Camera.main.gameObject;
         //sphere = GameObject.CreatePrimitive(PrimitiveType.Cube);
         //sphere.transform.localScale = new Vector3(0.01f, 0.01f, 0.25f);
+        lateralOffset = 0.186f; // shoulder breadth/2 for females
+        if (isMale)
+        {
+            lateralOffset = 0.204f; // shoulder breadth/2 for males
+        }
         participantTrials = GenerateParticipantTrial();
+        //rightHandObject.GetComponent<SkinnedMeshRenderer>().material = invisibleHand_material;
+        //JUST FOR HOME DEBUG PURPOSES:
+        //scenePosition = new Vector3(0f,1.0f,0.2f);
+        //NextTrial();
 
     }
 
@@ -90,7 +112,7 @@ public class PilotPlaceManager : MonoBehaviour
     public void startExperiment()
     {
         Invoke("CalbrationSetup", 0.5f);
-        
+
     }
 
     void CalbrationSetup()
@@ -98,24 +120,29 @@ public class PilotPlaceManager : MonoBehaviour
         startButton.SetActive(false);
         Vector3 cameraForward = mainCamera.transform.forward;
         Vector3 startPos = new Vector3(0f, mainCamera.transform.position.y, mainCamera.transform.position.z);
-        Vector3 scenePosition = startPos + cameraForward * 0.4f;
+        scenePosition = startPos + cameraForward * 0.4f;
         Debug.Log(startPos);
         calibrationStatus = true;
         //sphere.transform.position = scenePosition;
-        targetPosition = scenePosition;
+        //targetPosition = scenePosition;
+        NextTrial();
     }
 
-    public List<(Vector2, Quaternion)> GenerateParticipantTrial() 
+    public List<(float, Vector2, Quaternion)> GenerateParticipantTrial()
     {
-        
-        List<(Vector2, Quaternion)> trials = new List<(Vector2, Quaternion)>(); // list of IDs and Rotations
-        foreach (Vector2 id in indexOfDiffs)
+
+        List<(float, Vector2, Quaternion)> trials = new List<(float, Vector2, Quaternion)>(); // list of IDs and Rotations
+        foreach (float place in placements)
         {
-            foreach (Quaternion rotation in wireRotations)
+            foreach (Vector2 id in indexOfDiffs)
             {
-                trials.Add((id, rotation));
+                foreach (Quaternion rotation in wireRotations)
+                {
+                    trials.Add((place, id, rotation));
+                }
             }
         }
+        Debug.Log(trials.Count + " trials are generated");
 
         return trials;
     }
@@ -130,9 +157,28 @@ public class PilotPlaceManager : MonoBehaviour
         }
 
         //Decompose trial condition
-        (Vector2 id, Quaternion rotation) = participantTrials[currentTrial];
+        (float center, Vector2 id, Quaternion rotation) = participantTrials[currentTrial];
         float len = id.x;
         float width = id.y;
+
+        // adjusting center of placements
+        targetPosition = new Vector3(scenePosition.x + (center * lateralOffset), scenePosition.y, scenePosition.z);
+
+        // updating debug text
+        string placementType = "dominant";
+        if (center == -1f & isRightHanded)
+        {
+            placementType = "non-dominant";
+        }
+        else if (center == 0f)
+        {
+            placementType = "center";
+        }
+        else if (center == 1f && !isRightHanded)
+        {
+            placementType = "non-dominant";
+        }
+        debugText.updateText(placementType);
 
         // create wire
         currentWire = Instantiate(wirePrefab, targetPosition, rotation);
@@ -144,7 +190,7 @@ public class PilotPlaceManager : MonoBehaviour
         Vector3 ringPosition = targetPosition - ringOffset * wireForward;
         currentRing = Instantiate(SelectRingPrefab(width), ringPosition, rotation);
         currentRing.transform.forward = currentWire.transform.up; // to overcome problem regarding orientation of the ring-to be prependicular to wire
-        Debug.Log($"Trial {currentTrial + 1} started: L = {len}, W = {width}, Rotation = {rotation.eulerAngles}");
+        Debug.Log($"Trial {currentTrial + 1} started: P= {center} L = {len}, W = {width}, Rotation = {rotation.eulerAngles}");
 
         //saving tracking information as output for each trial
         string trackingOutputPath = Path.Combine(Application.dataPath, "CapturedData");
@@ -167,6 +213,8 @@ public class PilotPlaceManager : MonoBehaviour
         trialL = len;
         trialR = rotation;
         trialW = width;
+        //Rigidbody ring_rb = currentRing.GetComponent<Rigidbody>();
+        //ring_rb.constraints = RigidbodyConstraints.FreezeRotation;
     }
 
     GameObject SelectRingPrefab(float W)
@@ -243,5 +291,47 @@ public class PilotPlaceManager : MonoBehaviour
         string newData = $"{participantID},{isRightHanded},{trialW},{trialL},{trialR.x},{trialR.y},{trialR.z},{x},{y}\n";
         File.AppendAllText(trackingOutputFile, newData);
     }
+
+    public void EndTrial() // to end a trial and move to the next one
+    {
+
+        isTraversingWire = false;
+        // destroy previous trial objects
+        if (currentRing != null) Destroy(currentRing);
+        if (currentWire != null) Destroy(currentWire);
+
+        Debug.Log("OBJ deleted");
+
+        currentTrial++;
+
+        if (isRightHanded)
+        {
+            rightHandObject.GetComponent<SkinnedMeshRenderer>().material = originalHand_material;
+        }
+        else
+        {
+            leftHandObject.GetComponent<SkinnedMeshRenderer>().material = originalHand_material;
+        }
+
+        NextTrial();
+
+    }
+
+    public void OnStartTraversing()
+    {
+        Debug.Log("traversing started");
+
+        isTraversingWire = true;
+        if (isRightHanded)
+        {
+            rightHandObject.GetComponent<SkinnedMeshRenderer>().material = invisibleHand_material;
+        }
+        else
+        {
+            leftHandObject.GetComponent<SkinnedMeshRenderer>().material = invisibleHand_material;
+        }
+
+    }
+
 
 }

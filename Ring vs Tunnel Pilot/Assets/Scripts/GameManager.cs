@@ -39,8 +39,8 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     {
         new Vector2(0.20f, 0.04f),
         new Vector2(0.20f, 0.08f),
-        new Vector2(0.30f, 0.04f),
-        new Vector2(0.30f, 0.08f)
+        //new Vector2(0.30f, 0.04f),
+        //new Vector2(0.30f, 0.08f)
     };
 
     private List<Quaternion> wireRotations = new List<Quaternion> { 
@@ -327,8 +327,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         {
             leftHandObject.GetComponent<SkinnedMeshRenderer>().material = invisibleHand_material;
         }
-        
-        Debug.Log("matt");
+
     }
 
 }
