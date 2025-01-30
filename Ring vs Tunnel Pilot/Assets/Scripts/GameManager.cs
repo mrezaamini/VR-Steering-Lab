@@ -67,6 +67,15 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
     private List<(float, Vector2, Quaternion)> participantTrials;
 
+    //hand material swap
+    [SerializeField] private Material invisibleHand_material;
+    [SerializeField] private Material originalHand_material;
+    [SerializeField] private GameObject rightHandObject;
+    [SerializeField] private GameObject leftHandObject;
+    private SkinnedMeshRenderer mainHand_skin;
+
+
+
     // Start is called before the first frame update
     void Start()
     {
@@ -79,7 +88,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
             lateralOffset = 0.204f; // shoulder breadth/2 for males
         }
         participantTrials = GenerateParticipantTrial();
-
+        //rightHandObject.GetComponent<SkinnedMeshRenderer>().material = invisibleHand_material;
         //JUST FOR HOME DEBUG PURPOSES:
         //scenePosition = new Vector3(0f,1.0f,0.2f);
         //NextTrial();
@@ -170,7 +179,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         debugText.updateText(placementType);
 
     // create wire
-    currentWire = Instantiate(wirePrefab, targetPosition, rotation);
+        currentWire = Instantiate(wirePrefab, targetPosition, rotation);
         currentWire.transform.localScale = new Vector3(0.01f, len, 0.01f);
 
         //create ring
@@ -202,6 +211,8 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         trialL = len;
         trialR = rotation;
         trialW = width;
+        //Rigidbody ring_rb = currentRing.GetComponent<Rigidbody>();
+        //ring_rb.constraints = RigidbodyConstraints.FreezeRotation;
     }
 
     GameObject SelectRingPrefab(float W)
@@ -291,6 +302,15 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
         currentTrial++;
 
+        if (isRightHanded)
+        {
+            rightHandObject.GetComponent<SkinnedMeshRenderer>().material = originalHand_material;
+        }
+        else
+        {
+            leftHandObject.GetComponent<SkinnedMeshRenderer>().material = originalHand_material;
+        }
+
         NextTrial();
 
     }
@@ -300,6 +320,15 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         Debug.Log("traversing started");
 
         isTraversingWire = true;
+        if (isRightHanded)
+        {
+            rightHandObject.GetComponent<SkinnedMeshRenderer>().material = invisibleHand_material;
+        } else
+        {
+            leftHandObject.GetComponent<SkinnedMeshRenderer>().material = invisibleHand_material;
+        }
+        
+        Debug.Log("matt");
     }
 
 }
