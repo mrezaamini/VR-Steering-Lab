@@ -336,7 +336,7 @@ MonoBehaviour:
   _whenSelect:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 8101658645104959577}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: PilotPlaceManager, Assembly-CSharp
         m_MethodName: startExperiment
         m_Mode: 1
@@ -13826,14 +13826,16 @@ MonoBehaviour:
   m_GameObject: {fileID: 2367006457366124097}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 604e2520fa647754aa6ac66e4b4ccef8, type: 3}
+  m_Script: {fileID: 11500000, guid: 9a0adf505875460468e721ad1cd55c2f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   participantID: 0
-  shoulderBreadth: 0
+  isMale: 0
   isRightHanded: 0
-  wirePrefab: {fileID: 0}
-  ringPrefabs: []
+  wirePrefab: {fileID: 4070905180455124837, guid: 44ae866ed43fd5f4295adb835cf482a0, type: 3}
+  ringPrefabs:
+  - {fileID: 830956769335413993, guid: 080a8cb87954131448ad88fbc83e2c8d, type: 3}
+  - {fileID: 132242011410579624, guid: 5ce1697b9eca5f04b99caa39e8475cb4, type: 3}
   currentTrial: 0
   wires: []
   startButton: {fileID: 38247474}
