@@ -1,8 +1,14 @@
+using System.IO;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class GameManager : MonoBehaviour
 {
+    //TO CHANGE: just for visualizing the hit point
+    //public GameObject dotPrefab; 
+    //private GameObject currentDot;
+    public DebugText debugText;
+
     // participant based variables
     public int participantID;
     public bool rightHanded;
@@ -11,6 +17,11 @@ public class GameManager : MonoBehaviour
     [SerializeField] private List<GameObject> ringPrefabs; // contains 3 different rings of experiment
     private Vector3 targetPosition;
 
+    // for saving tracking information
+    private string trackingOutputFile;
+    private float trialW;
+    private float trialL;
+    private Quaternion trialR;
 
 
     // for single condition
@@ -27,15 +38,10 @@ public class GameManager : MonoBehaviour
     // Task Conditions
     public List<Vector2> indexOfDiffs = new List<Vector2> // L (wire), W (ring diameter), wire diameter is fixed to 0.01 m
     {
-        new Vector2(0.20f, 0.02f),
         new Vector2(0.20f, 0.04f),
         new Vector2(0.20f, 0.08f),
-        new Vector2(0.25f, 0.02f),
-        new Vector2(0.25f, 0.04f),
-        new Vector2(0.25f, 0.08f),
-        new Vector2(0.35f, 0.02f),
-        new Vector2(0.35f, 0.04f),
-        new Vector2(0.35f, 0.08f)
+        new Vector2(0.30f, 0.04f),
+        new Vector2(0.30f, 0.08f)
     };
 
     private List<Quaternion> wireRotations = new List<Quaternion> { 
@@ -72,17 +78,30 @@ public class GameManager : MonoBehaviour
         Quaternion.Euler(0, 315, 135)
     };
 
+    private int[,] placements =
+    {
+        {1,2,3},
+        {2,3,1},
+        {3,1,2}
+    };
+
     void Start()
     {
         participantTrials = GenerateParticipantTrial(participantID); //TODO: update numbers based on shoulder and eye level
-        if (rightHanded)
-        {
-            targetPosition = new Vector3(0.158f, 1.1f, 3.2f); // right handed participant
-        }
-        else
-        {
-            targetPosition = new Vector3(0.5f, 1.0f, 3.23f); // left handed participant
-        }
+
+        //TODO get the hmd position for generating position trials
+        targetPosition = new Vector3(0.158f, 1.1f, 3.2f);
+
+
+
+        //if (rightHanded)
+        //{
+        //    targetPosition = new Vector3(0.158f, 1.1f, 3.2f); // right handed participant
+        //}
+        //else
+        //{
+        //    targetPosition = new Vector3(0.5f, 1.0f, 3.23f); // left handed participant
+        //}
         Debug.Log($"Trials initialized: {participantTrials?.Count ?? 0} trials created.");
         NextTrial();
         //ActivateRandomWire();
@@ -95,6 +114,10 @@ public class GameManager : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Space))
         {
             EndTrial();
+        }
+        if (isTraversingWire)
+        {
+            OnTraversingTracking();
         }
     }
 
@@ -124,6 +147,34 @@ public class GameManager : MonoBehaviour
         currentRing = Instantiate(SelectRingPrefab(width), ringPosition, rotation);
         currentRing.transform.forward = currentWire.transform.up; // to overcome problem regarding orientation of the ring-to be prependicular to wire
         Debug.Log($"Trial {currentTrial + 1} started: L = {len}, W = {width}, Rotation = {rotation.eulerAngles}");
+
+        //saving tracking information as output for each trial
+        string trackingOutputPath = Path.Combine(Application.dataPath, "CapturedData");
+        string trackingOutputName = $"P{participantID}_T{currentTrial + 1}_wireTrack.csv";
+        trackingOutputFile = Path.Combine(trackingOutputPath, trackingOutputName);
+        if (!Directory.Exists(trackingOutputPath))
+        {
+            Debug.Log("Directory Not Found!! created new one");
+            Directory.CreateDirectory(trackingOutputPath);
+        }
+        if (!File.Exists(trackingOutputFile))
+        {
+            File.WriteAllText(trackingOutputFile, "PID,rightHanded,width,length,rotationX,rotationY,rotationZ,PositionX,PositionY\n");
+        }
+        else
+        {
+            Debug.Log("WARNING: file already exists, overwritting!");
+        }
+        //update trial info for saving tracking info in output file
+        trialL = len;
+        trialR = rotation;
+        trialW = width;
+    }
+
+    private void SaveWireTrack(float x, float y)
+    {
+        string newData = $"{participantID},{rightHanded},{trialW},{trialL},{trialR.x},{trialR.y},{trialR.z},{x},{y}\n";
+        File.AppendAllText(trackingOutputFile, newData);
     }
 
     public void EndTrial() // to end a trial and move to the next one
@@ -166,7 +217,6 @@ public class GameManager : MonoBehaviour
     }
 
 
-
     List<Quaternion> CounterBalanceRotations(int participantId) // Generate latin square of rotations for counter balancing rotations
     {
         List<Quaternion> rotationOrder = new List<Quaternion>();
@@ -196,26 +246,6 @@ public class GameManager : MonoBehaviour
         return trials;
     }
 
-
-    private void ActivateRandomWire()
-    {
-        
-        List<GameObject> unvisitedWires = wires.FindAll(wire => !visitedWires.Contains(wire));
-
-        if (unvisitedWires.Count > 0)
-        {
-            currentWire = unvisitedWires[Random.Range(0, unvisitedWires.Count)]; // Choose a random unvisited wire
-            currentWire.SetActive(true); // Activate the selected wire
-            visitedWires.Add(currentWire); // Mark this wire as visited
-        }
-        else
-        {
-            Debug.Log("All wires have been visited. Restarting wire visit tracking.");
-            visitedWires.Clear(); // Clear the visited wires to allow re-selection
-            ActivateRandomWire(); // Re-activate a random wire
-        }
-    }
-
     public void OnStartTraversing()
     {
         Debug.Log("traversing started");
@@ -223,28 +253,95 @@ public class GameManager : MonoBehaviour
         isTraversingWire = true;
     }
 
-    //public void OnTraversing(GameObject wire)
-    //{
-    //    if (wire == currentWire && isTraversingWire)
-    //    {
-    //        Debug.Log("Ring is traversing the wire.");
-    //    }
-    //}
+    private void OnTraversingTracking()
+    {
+        Vector3 ringPlaneNormal = currentRing.transform.forward;
+        Vector3 ringCenter = currentRing.transform.position;
 
-    //public void OnFinishTraversing()
-    //{
-    //    if (isTraversingWire)
-    //    {
-    //        Debug.Log("Ring entered the end collider of the current wire.");
-    //        currentWire.SetActive(false); // Deactivate the current wire
-    //        isTraversingWire = false;
-    //        ActivateRandomWire(); // Activate a new random wire
-    //    }
-    //}
+        Vector3 wireRayStartPos = GetWireStartPoint().position;
+        Ray wireRay = new Ray(wireRayStartPos, currentWire.transform.up);
+        Plane ringPlane = new Plane(ringPlaneNormal, ringCenter);
+        Vector3 intersectionPoint;
+        if (ringPlane.Raycast(wireRay, out float intr))
+        {
+            intersectionPoint = wireRay.GetPoint(intr);
+            Vector3 localIntersection = intersectionPoint - ringCenter;
+            float x = Vector3.Dot(localIntersection, currentRing.transform.right);
+            float y = Vector3.Dot(localIntersection, currentRing.transform.up);
+
+            debugText.updateText("x: " + x + " / y: "+ y);
+            //saving tracking info to file
+            SaveWireTrack(x, y);
+        }
+        else
+        { 
+            debugText.updateText("no intersection found"); 
+        }
+
+    }
+
+    private Transform GetWireStartPoint()
+    {
+        Transform[] children = currentWire.GetComponentsInChildren<Transform>(true);
+        Transform startPoint = null;
+
+        foreach (Transform child in children)
+        {
+            if (child.CompareTag("StartPoint"))
+            {
+                startPoint = child;
+                break;
+            }
+        }
+        if (startPoint == null)
+        {
+            Debug.Log("No child with the specified tag found.");
+        }
+        return startPoint;
+    }
+
+    private void OnDrawGizmos()
+    {
+        if (currentWire == null || currentRing == null) return;
+
+        // Get the ring's plane normal and center
+        Vector3 ringPlaneNormal = currentRing.transform.forward; // Or adjust based on your orientation
+        Vector3 ringCenter = currentRing.transform.position;
+
+        // Visualize the plane with Gizmos
+        DrawPlaneGizmo(ringCenter, ringPlaneNormal, 5f, 5f); // 5x5 plane size
+    }
+
+    private void DrawPlaneGizmo(Vector3 center, Vector3 normal, float width, float height)
+    {
+        Gizmos.color = Color.cyan;
+
+        // Calculate plane corners
+        Vector3 right = Vector3.Cross(normal, Vector3.up).normalized;
+        if (right == Vector3.zero) right = Vector3.Cross(normal, Vector3.forward).normalized;
+
+        Vector3 forward = Vector3.Cross(normal, right);
+
+        Vector3 topLeft = center + (-right * width / 2) + (forward * height / 2);
+        Vector3 topRight = center + (right * width / 2) + (forward * height / 2);
+        Vector3 bottomLeft = center + (-right * width / 2) + (-forward * height / 2);
+        Vector3 bottomRight = center + (right * width / 2) + (-forward * height / 2);
+
+        // Draw the plane as a rectangle
+        Gizmos.DrawLine(topLeft, topRight);
+        Gizmos.DrawLine(topRight, bottomRight);
+        Gizmos.DrawLine(bottomRight, bottomLeft);
+        Gizmos.DrawLine(bottomLeft, topLeft);
+
+        // Draw the normal direction
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawLine(center, center + normal * 2f); // Normal line (scaled for visibility)
+    }
+    
 
     public void OnFailTraversing(GameObject wire) // going out of bounds while traversing
     {
-        // TODO
+        // TODO: redo trial
     }
 }
 

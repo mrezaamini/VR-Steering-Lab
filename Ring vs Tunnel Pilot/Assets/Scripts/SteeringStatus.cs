@@ -36,19 +36,5 @@ public class SteeringStatus : MonoBehaviour
             gameManager.EndTrial();
         }
 
-        
-
-     
-            //Debug.Log("otherr collider " + other.gameObject.name);
-            //Debug.Log("thiss collider " + gameObject.tag);
-            //if (other.gameObject.CompareTag("InsideRing"))
-            //{
-            //    gameManager.OnStartTraversing();
-            //}
-            //else if (other.gameObject.CompareTag("EndPoint"))
-            //{
-            //    gameManager.OnFinishTraversing();
-            //}
-
     }
 }
