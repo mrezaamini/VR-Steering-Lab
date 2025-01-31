@@ -19,8 +19,6 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
     public DebugText debugText;
 
-
-
     private string trackingOutputFile;
     private float trialW;
     private float trialL;
@@ -37,26 +35,23 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
     private List<Vector2> indexOfDiffs = new List<Vector2> // L (wire), W (ring diameter), wire diameter is fixed to 0.01 m
     {
-        new Vector2(0.20f, 0.04f),
-        new Vector2(0.20f, 0.08f),
-        //new Vector2(0.30f, 0.04f),
-        //new Vector2(0.30f, 0.08f)
+        new Vector2(0.30f, 0.04f), 
+        new Vector2(0.35f, 0.04f),
+        new Vector2(0.40f, 0.04f),
+        new Vector2(0.45f, 0.04f)
     };
 
     private List<Quaternion> wireRotations = new List<Quaternion> { 
         // main axes
         Quaternion.Euler(0, 0, 0),
         Quaternion.Euler(0, 0, 90),
-        Quaternion.Euler(0, 0, 180),
-        Quaternion.Euler(0, 0, 270),
+        //Quaternion.Euler(0, 0, 180),
+        //Quaternion.Euler(0, 0, 270),
         Quaternion.Euler(90, 0, 0),
-        Quaternion.Euler(270, 0, 0),
+       //Quaternion.Euler(270, 0, 0),
     };
 
-    private float[] placements = { -1f, 0f, 1f }; // it will be multiplied by the lateral offset in code for generating placement conditions
-
     private Vector3 scenePosition;
-    private float lateralOffset;
 
     //private GameObject sphere;
     private GameObject mainCamera;
@@ -65,30 +60,28 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     public GameObject startButton;
 
 
-    private List<(float, Vector2, Quaternion)> participantTrials;
-
-    //hand material swap
-    [SerializeField] private Material invisibleHand_material;
-    [SerializeField] private Material originalHand_material;
-    [SerializeField] private GameObject rightHandObject;
-    [SerializeField] private GameObject leftHandObject;
-    private SkinnedMeshRenderer mainHand_skin;
+    private List<(Vector2, Quaternion)> participantTrials;
 
 
+
+    // UPDATE BASED ON PLACEMENT PILOT
+    private float offset_lateral = 0.0f;
+    private float offset_depth = 0.35f;
+    private float offset_height = 0.2f;
+    private float mainHand; // multiplier of the lateral offset to adjust dominant hand position
 
     // Start is called before the first frame update
     void Start()
     {
         mainCamera = Camera.main.gameObject;
-        //sphere = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        //sphere.transform.localScale = new Vector3(0.01f, 0.01f, 0.25f);
-        lateralOffset = 0.186f; // shoulder breadth/2 for females
-        if (isMale)
+        mainHand = 1f;
+        if (!isRightHanded)
         {
-            lateralOffset = 0.204f; // shoulder breadth/2 for males
+            mainHand = -1f;
         }
+
         participantTrials = GenerateParticipantTrial();
-        //rightHandObject.GetComponent<SkinnedMeshRenderer>().material = invisibleHand_material;
+
         //JUST FOR HOME DEBUG PURPOSES:
         //scenePosition = new Vector3(0f,1.0f,0.2f);
         //NextTrial();
@@ -120,30 +113,24 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         startButton.SetActive(false);
         Vector3 cameraForward = mainCamera.transform.forward;
         Vector3 startPos = new Vector3(0f, mainCamera.transform.position.y, mainCamera.transform.position.z);
-        scenePosition = startPos + cameraForward * 0.4f;
+        scenePosition = startPos + cameraForward * offset_depth;
         Debug.Log(startPos);
         calibrationStatus = true;
-        //sphere.transform.position = scenePosition;
-        //targetPosition = scenePosition;
         NextTrial();
     }
 
-    public List<(float, Vector2, Quaternion)> GenerateParticipantTrial()
+    public List<(Vector2, Quaternion)> GenerateParticipantTrial()
     {
 
-        List<(float, Vector2, Quaternion)> trials = new List<(float, Vector2, Quaternion)>(); // list of IDs and Rotations
-        foreach (float place in placements)
+        List<(Vector2, Quaternion)> trials = new List<(Vector2, Quaternion)>(); // list of IDs and Rotations
+
+        foreach (Vector2 id in indexOfDiffs)
         {
-            foreach (Vector2 id in indexOfDiffs)
+            foreach (Quaternion rotation in wireRotations)
             {
-                foreach (Quaternion rotation in wireRotations)
-                {
-                    trials.Add((place, id, rotation));
-                }
+                trials.Add((id, rotation));
             }
         }
-        Debug.Log(trials.Count + " trials are generated");
-
         return trials;
     }
 
@@ -157,38 +144,27 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         }
 
         //Decompose trial condition
-        (float center, Vector2 id, Quaternion rotation) = participantTrials[currentTrial];
+        (Vector2 id, Quaternion rotation) = participantTrials[currentTrial];
         float len = id.x;
         float width = id.y;
 
         // adjusting center of placements
-        targetPosition = new Vector3(scenePosition.x+(center*lateralOffset),scenePosition.y,scenePosition.z);
+        targetPosition = new Vector3(scenePosition.x + (mainHand * offset_lateral), scenePosition.y - offset_height, scenePosition.z);
 
-        // updating debug text
-        string placementType = "dominant";
-        if (center == -1f & isRightHanded)
-        {
-            placementType = "non-dominant";
-        } else if (center == 0f)
-        {
-            placementType = "center";
-        } else if(center == 1f && !isRightHanded)
-        {
-            placementType = "non-dominant";
-        }
-        debugText.updateText(placementType);
+        // update debug text
+        debugText.updateText("length: " + len);
 
-    // create wire
+        // create wire
         currentWire = Instantiate(wirePrefab, targetPosition, rotation);
-        currentWire.transform.localScale = new Vector3(0.01f, len, 0.01f);
+        currentWire.transform.localScale = new Vector3(0.01f, len/2, 0.01f); // len/2 because the prefab is already 2 units long
 
         //create ring
         Vector3 wireForward = currentWire.transform.up;
-        float ringOffset = len + 0.05f;
+        float ringOffset = len/2 + 0.02f;
         Vector3 ringPosition = targetPosition - ringOffset * wireForward;
         currentRing = Instantiate(SelectRingPrefab(width), ringPosition, rotation);
         currentRing.transform.forward = currentWire.transform.up; // to overcome problem regarding orientation of the ring-to be prependicular to wire
-        Debug.Log($"Trial {currentTrial + 1} started: P= {center} L = {len}, W = {width}, Rotation = {rotation.eulerAngles}");
+        Debug.Log($"Trial {currentTrial + 1} started: P= {mainHand} L = {len}, W = {width}, Rotation = {rotation.eulerAngles}");
 
         //saving tracking information as output for each trial
         string trackingOutputPath = Path.Combine(Application.dataPath, "CapturedData");
@@ -211,8 +187,6 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         trialL = len;
         trialR = rotation;
         trialW = width;
-        //Rigidbody ring_rb = currentRing.GetComponent<Rigidbody>();
-        //ring_rb.constraints = RigidbodyConstraints.FreezeRotation;
     }
 
     GameObject SelectRingPrefab(float W)
@@ -302,15 +276,6 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
         currentTrial++;
 
-        if (isRightHanded)
-        {
-            rightHandObject.GetComponent<SkinnedMeshRenderer>().material = originalHand_material;
-        }
-        else
-        {
-            leftHandObject.GetComponent<SkinnedMeshRenderer>().material = originalHand_material;
-        }
-
         NextTrial();
 
     }
@@ -320,14 +285,6 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         Debug.Log("traversing started");
 
         isTraversingWire = true;
-        if (isRightHanded)
-        {
-            rightHandObject.GetComponent<SkinnedMeshRenderer>().material = invisibleHand_material;
-        } else
-        {
-            leftHandObject.GetComponent<SkinnedMeshRenderer>().material = invisibleHand_material;
-        }
-
     }
 
 }

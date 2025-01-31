@@ -47,16 +47,17 @@ public class PilotPlaceManager : MonoBehaviour
         // main axes
         Quaternion.Euler(0, 0, 0),
         Quaternion.Euler(0, 0, 90),
-        Quaternion.Euler(0, 0, 180),
-        Quaternion.Euler(0, 0, 270),
+        //Quaternion.Euler(0, 0, 180),
+        //Quaternion.Euler(0, 0, 270),
         Quaternion.Euler(90, 0, 0),
-        Quaternion.Euler(270, 0, 0),
+        //Quaternion.Euler(270, 0, 0),
     };
 
     private float[] placements = { -1f, 0f, 1f }; // it will be multiplied by the lateral offset in code for generating placement conditions
 
     private Vector3 scenePosition;
     private float lateralOffset;
+    float heightOffset = 0.2f;
 
     //private GameObject sphere;
     private GameObject mainCamera;
@@ -66,6 +67,8 @@ public class PilotPlaceManager : MonoBehaviour
 
 
     private List<(float, Vector2, Quaternion)> participantTrials;
+
+
 
     //hand material swap
     [SerializeField] private Material invisibleHand_material;
@@ -162,7 +165,7 @@ public class PilotPlaceManager : MonoBehaviour
         float width = id.y;
 
         // adjusting center of placements
-        targetPosition = new Vector3(scenePosition.x + (center * lateralOffset), scenePosition.y, scenePosition.z);
+        targetPosition = new Vector3(scenePosition.x + (center * lateralOffset), scenePosition.y - heightOffset, scenePosition.z);
 
         // updating debug text
         string placementType = "dominant";
