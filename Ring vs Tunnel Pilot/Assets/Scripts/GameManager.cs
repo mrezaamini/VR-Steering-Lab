@@ -19,6 +19,8 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
     public DebugText debugText;
 
+
+
     private string trackingOutputFile;
     private float trialW;
     private float trialL;
@@ -35,7 +37,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
     private List<Vector2> indexOfDiffs = new List<Vector2> // L (wire), W (ring diameter), wire diameter is fixed to 0.01 m
     {
-        new Vector2(0.30f, 0.04f), 
+       new Vector2(0.30f, 0.04f),
         new Vector2(0.35f, 0.04f),
         new Vector2(0.40f, 0.04f),
         new Vector2(0.45f, 0.04f)
@@ -48,10 +50,17 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         //Quaternion.Euler(0, 0, 180),
         //Quaternion.Euler(0, 0, 270),
         Quaternion.Euler(90, 0, 0),
-       //Quaternion.Euler(270, 0, 0),
+        //Quaternion.Euler(270, 0, 0),
     };
 
+    // target placement attributes
+    private float offset_lateral = 0.0f;
+    private float offset_depth = 0.35f;
+    private float offset_height = 0.2f;
+    private float mainHand; // multiplier of the lateral offset to adjust dominant hand position
     private Vector3 scenePosition;
+
+    float heightOffset = 0.2f;
 
     //private GameObject sphere;
     private GameObject mainCamera;
@@ -62,13 +71,14 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
     private List<(Vector2, Quaternion)> participantTrials;
 
+    //hand material swap
+    [SerializeField] private Material invisibleHand_material;
+    [SerializeField] private Material originalHand_material;
+    [SerializeField] private GameObject rightHandObject;
+    [SerializeField] private GameObject leftHandObject;
+    private SkinnedMeshRenderer mainHand_skin;
 
 
-    // UPDATE BASED ON PLACEMENT PILOT
-    private float offset_lateral = 0.0f;
-    private float offset_depth = 0.35f;
-    private float offset_height = 0.2f;
-    private float mainHand; // multiplier of the lateral offset to adjust dominant hand position
 
     // Start is called before the first frame update
     void Start()
@@ -81,11 +91,6 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         }
 
         participantTrials = GenerateParticipantTrial();
-
-        //JUST FOR HOME DEBUG PURPOSES:
-        //scenePosition = new Vector3(0f,1.0f,0.2f);
-        //NextTrial();
-
     }
 
     // Update is called once per frame
@@ -156,11 +161,11 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
         // create wire
         currentWire = Instantiate(wirePrefab, targetPosition, rotation);
-        currentWire.transform.localScale = new Vector3(0.01f, len/2, 0.01f); // len/2 because the prefab is already 2 units long
+        currentWire.transform.localScale = new Vector3(0.01f, len / 2, 0.01f); // len/2 because the prefab is already 2 units long
 
         //create ring
         Vector3 wireForward = currentWire.transform.up;
-        float ringOffset = len/2 + 0.02f;
+        float ringOffset = len / 2 + 0.02f;
         Vector3 ringPosition = targetPosition - ringOffset * wireForward;
         currentRing = Instantiate(SelectRingPrefab(width), ringPosition, rotation);
         currentRing.transform.forward = currentWire.transform.up; // to overcome problem regarding orientation of the ring-to be prependicular to wire
@@ -187,6 +192,8 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         trialL = len;
         trialR = rotation;
         trialW = width;
+        //Rigidbody ring_rb = currentRing.GetComponent<Rigidbody>();
+        //ring_rb.constraints = RigidbodyConstraints.FreezeRotation;
     }
 
     GameObject SelectRingPrefab(float W)
@@ -276,6 +283,15 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
         currentTrial++;
 
+        if (isRightHanded)
+        {
+            rightHandObject.GetComponent<SkinnedMeshRenderer>().material = originalHand_material;
+        }
+        else
+        {
+            leftHandObject.GetComponent<SkinnedMeshRenderer>().material = originalHand_material;
+        }
+
         NextTrial();
 
     }
@@ -285,6 +301,15 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         Debug.Log("traversing started");
 
         isTraversingWire = true;
+        if (isRightHanded)
+        {
+            rightHandObject.GetComponent<SkinnedMeshRenderer>().material = invisibleHand_material;
+        }
+        else
+        {
+            leftHandObject.GetComponent<SkinnedMeshRenderer>().material = invisibleHand_material;
+        }
+
     }
 
 }

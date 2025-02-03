@@ -46,5 +46,5 @@ def plot_coordinates(csv_file):
 
 
 
-csv_file_path = '../Assets/CapturedData/P1_T1_wireTrack.csv'
+csv_file_path = '../Assets/CapturedData/P0_T1_wireTrack.csv'
 plot_coordinates(csv_file_path)

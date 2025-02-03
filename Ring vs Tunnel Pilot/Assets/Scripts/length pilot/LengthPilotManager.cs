@@ -35,24 +35,23 @@ public class LengthPilot : MonoBehaviour
 
     private List<Vector2> indexOfDiffs = new List<Vector2> // L (wire), W (ring diameter), wire diameter is fixed to 0.01 m
     {
-        new Vector2(0.30f, 0.04f), // TODO: update these based on discussion about focal point!! what is the max available (based on participant view and reach)
-        new Vector2(0.30f, 0.08f),
+        new Vector2(0.30f, 0.04f),
         new Vector2(0.35f, 0.04f),
-        new Vector2(0.35f, 0.08f)
+        new Vector2(0.40f, 0.04f),
+        new Vector2(0.45f, 0.04f)
     };
 
     private List<Quaternion> wireRotations = new List<Quaternion> { 
         // main axes
         Quaternion.Euler(0, 0, 0),
         Quaternion.Euler(0, 0, 90),
-        Quaternion.Euler(0, 0, 180),
-        Quaternion.Euler(0, 0, 270),
+        //Quaternion.Euler(0, 0, 180),
+        //Quaternion.Euler(0, 0, 270),
         Quaternion.Euler(90, 0, 0),
-        Quaternion.Euler(270, 0, 0),
+       //Quaternion.Euler(270, 0, 0),
     };
 
     private Vector3 scenePosition;
-    private float lateralOffset;
 
     //private GameObject sphere;
     private GameObject mainCamera;
@@ -62,23 +61,19 @@ public class LengthPilot : MonoBehaviour
 
 
     private List<(Vector2, Quaternion)> participantTrials;
-    
+
 
 
     // UPDATE BASED ON PLACEMENT PILOT
-    private float offset_lateral;
-    private float offset_depth;
-    private float mainHand; // multiplier of the lateral offset to adjust dominant hand position >> if decision is on center => remove it from code!
+    private float offset_lateral = 0.0f;
+    private float offset_depth = 0.35f;
+    private float offset_height = 0.2f;
+    private float mainHand; // multiplier of the lateral offset to adjust dominant hand position
 
     // Start is called before the first frame update
     void Start()
     {
         mainCamera = Camera.main.gameObject;
-        lateralOffset = 0.186f; // shoulder breadth/2 for females
-        if (isMale)
-        {
-            lateralOffset = 0.204f; // shoulder breadth/2 for males
-        }
         mainHand = 1f;
         if (!isRightHanded)
         {
@@ -128,17 +123,14 @@ public class LengthPilot : MonoBehaviour
     {
 
         List<(Vector2, Quaternion)> trials = new List<(Vector2, Quaternion)>(); // list of IDs and Rotations
-        
+
         foreach (Vector2 id in indexOfDiffs)
         {
             foreach (Quaternion rotation in wireRotations)
             {
-                    trials.Add((id, rotation));
+                trials.Add((id, rotation));
             }
         }
-        
-        //Debug.Log(trials.Count + " trials are generated");
-
         return trials;
     }
 
@@ -157,18 +149,18 @@ public class LengthPilot : MonoBehaviour
         float width = id.y;
 
         // adjusting center of placements
-        targetPosition = new Vector3(scenePosition.x + (mainHand * lateralOffset), scenePosition.y, scenePosition.z);
+        targetPosition = new Vector3(scenePosition.x + (mainHand * offset_lateral), scenePosition.y - offset_height, scenePosition.z);
 
         // update debug text
-        debugText.updateText("length: "+len);
+        debugText.updateText("length: " + len);
 
         // create wire
         currentWire = Instantiate(wirePrefab, targetPosition, rotation);
-        currentWire.transform.localScale = new Vector3(0.01f, len, 0.01f);
+        currentWire.transform.localScale = new Vector3(0.01f, len / 2, 0.01f); // len/2 because the prefab is already 2 units long
 
         //create ring
         Vector3 wireForward = currentWire.transform.up;
-        float ringOffset = len + 0.05f;
+        float ringOffset = len / 2 + 0.02f;
         Vector3 ringPosition = targetPosition - ringOffset * wireForward;
         currentRing = Instantiate(SelectRingPrefab(width), ringPosition, rotation);
         currentRing.transform.forward = currentWire.transform.up; // to overcome problem regarding orientation of the ring-to be prependicular to wire
@@ -254,9 +246,6 @@ public class LengthPilot : MonoBehaviour
             Vector3 localIntersection = intersectionPoint - ringCenter;
             float x = Vector3.Dot(localIntersection, currentRing.transform.right);
             float y = Vector3.Dot(localIntersection, currentRing.transform.up);
-
-            //debugText.updateText("x: " + x + " / y: " + y);
-            //saving tracking info to file
             SaveWireTrack(x, y);
         }
         else
