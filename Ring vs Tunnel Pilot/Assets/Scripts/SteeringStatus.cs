@@ -2,7 +2,13 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class SteeringStatus : MonoBehaviour
+
+// THIS CODE IS NOT EFFECTIVE CURRENTLY!! this code is for changing traverse status to start or finish for each trial based on the collision with
+// start and end bound on the wire. However, now PLAN B is effective which does not work with with colliders, it works with distance calculation
+// from the start point as the ring rotation is locked and wire is straight (for now) 
+//
+// if the use case is changed and working with colliders are needed REMEMBER to activate start and end bounds on wire prefab!! with this CODE on the ring inner surface colllider
+public class SteeringStatus : MonoBehaviour 
 {
     public GameManager gameManager;
 
