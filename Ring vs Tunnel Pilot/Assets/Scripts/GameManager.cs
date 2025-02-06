@@ -15,6 +15,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     public GameObject wirePrefab;
     [SerializeField] private List<GameObject> ringPrefabs;
     private Vector3 targetPosition;
+    public AudioClip success_sound;
 
 
     public DebugText debugText;
@@ -32,6 +33,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
     private GameObject currentWire;
     private GameObject currentRing;
+    private Vector3 currentRing_position_init = new Vector3(0.0f, 0.0f, 0.0f); // used for traversing status (start, end) calculations (PLAN B, since fast movement may not be catched by the collider itself. As no rotation is included in this user study, this approach can be useful)
 
     private bool isTraversingWire = false;
 
@@ -91,6 +93,9 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         }
 
         participantTrials = GenerateParticipantTrial();
+
+        //ONLY FOR HOME DEV PURPOSES
+        //startExperiment();
     }
 
     // Update is called once per frame
@@ -100,8 +105,25 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         {
             return;
         }
+
+        if (!isTraversingWire & currentRing != null)
+        {
+            float forward_displacement = Mathf.Abs(Vector3.Dot(currentRing.transform.position - currentRing_position_init, currentWire.transform.up)); // calculating displacement for starting traverse status
+            // Check if movement along the forward vector is greater than 0.2 units
+            if (forward_displacement > 0.025f) //0.2 is the init offset in NextTrial(), and 0.005 for the ring thickness/2
+            {
+                OnStartTraversing();
+            }
+        }
+
         if (isTraversingWire)
         {
+            float forward_displacement = Mathf.Abs(Vector3.Dot(currentRing.transform.position - currentRing_position_init, currentWire.transform.up)); // calculating displacement for ending traverse status
+            // Check if movement along the forward vector is greater than 0.2 units
+            if (forward_displacement > currentWire.transform.localScale.y * 2 + 0.005f) //*2 since the prefab is already x2 long (see create wire in NextTrial()). 0.005 is because of the ring thickness (=1) and ring plane is considered as the center of it 
+            {
+                EndTrial();
+            }
             OnTraversingTracking();
         }
 
@@ -167,6 +189,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         Vector3 wireForward = currentWire.transform.up;
         float ringOffset = len / 2 + 0.02f;
         Vector3 ringPosition = targetPosition - ringOffset * wireForward;
+        currentRing_position_init = ringPosition; // saving ring start point for PLAN B of traverse status calculation
         currentRing = Instantiate(SelectRingPrefab(width), ringPosition, rotation);
         currentRing.transform.forward = currentWire.transform.up; // to overcome problem regarding orientation of the ring-to be prependicular to wire
         Debug.Log($"Trial {currentTrial + 1} started: P= {mainHand} L = {len}, W = {width}, Rotation = {rotation.eulerAngles}");
@@ -291,6 +314,9 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         {
             leftHandObject.GetComponent<SkinnedMeshRenderer>().material = originalHand_material;
         }
+
+        //play success sound
+        AudioSource.PlayClipAtPoint(success_sound, Camera.main.transform.position);
 
         NextTrial();
 
