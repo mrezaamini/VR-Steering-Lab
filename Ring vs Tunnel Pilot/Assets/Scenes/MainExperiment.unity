@@ -13839,17 +13839,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9a0adf505875460468e721ad1cd55c2f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  participantID: 0
+  participantID: 6
   isMale: 0
   isRightHanded: 1
   wirePrefab: {fileID: 4070905180455124837, guid: 44ae866ed43fd5f4295adb835cf482a0, type: 3}
   ringPrefabs:
   - {fileID: 5008762455583059267, guid: c58839f61a6e87e46bf6f99815048ba7, type: 3}
+  - {fileID: 830956769335413993, guid: 080a8cb87954131448ad88fbc83e2c8d, type: 3}
   - {fileID: 132242011410579624, guid: 5ce1697b9eca5f04b99caa39e8475cb4, type: 3}
+  ballPrefab: {fileID: 7156060053805399220, guid: 4dffe7ee9dd1400448ae5b873186042c, type: 3}
+  tunnelPrefab: {fileID: 6717614935026882435, guid: 6e9069019b670c347a90d092a691aad9, type: 3}
   success_sound: {fileID: 8300000, guid: 6c18dd76dfbe7d84781999f7a05a78bb, type: 3}
   debugText: {fileID: 2124690480}
   currentTrial: 0
-  wires: []
   startButton: {fileID: 38247474}
   invisibleHand_material: {fileID: 2100000, guid: c11112618feba4a4fbeee93b3fa14408, type: 2}
   originalHand_material: {fileID: 2100000, guid: d641a50c4fe4ee3489a64cf52b76ae79, type: 2}
