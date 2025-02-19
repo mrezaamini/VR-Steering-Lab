@@ -2235,7 +2235,7 @@ MonoBehaviour:
   _twoGrabTransformer: {fileID: 0}
   _targetTransform: {fileID: 0}
   _maxGrabPoints: -1
-  _rigidbody: {fileID: 0}
+  _rigidbody: {fileID: 9095315299890689617}
   _kinematicWhileSelected: 1
   _throwWhenUnselected: 0
 --- !u!54 &9095315299890689617
@@ -2264,7 +2264,7 @@ Rigidbody:
   m_IsKinematic: 1
   m_Interpolate: 0
   m_Constraints: 0
-  m_CollisionDetection: 0
+  m_CollisionDetection: 1
 --- !u!114 &3206926316530980142
 MonoBehaviour:
   m_ObjectHideFlags: 0
