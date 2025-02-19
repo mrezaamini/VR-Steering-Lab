@@ -15,6 +15,7 @@ TagManager:
   - LocoButton
   - LocoText
   - SteeringPath
+  - targetBall
   layers:
   - Default
   - TransparentFX
