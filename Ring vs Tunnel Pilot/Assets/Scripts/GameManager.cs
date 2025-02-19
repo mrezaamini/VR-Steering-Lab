@@ -20,6 +20,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
     [Header("UI")]
     public AudioClip success_sound;
+    public AudioClip error_sound;
 
 
 
@@ -65,8 +66,8 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
     private List<Quaternion> pathRotations = new List<Quaternion> { 
          // z-plane
-        Quaternion.Euler(0, 0, 0),
-        //Quaternion.Euler(0, 0, 45),
+        //Quaternion.Euler(0, 0, 0),
+        Quaternion.Euler(0, 0, 45),
         //Quaternion.Euler(0, 0, 90),
         //Quaternion.Euler(0, 0, 135),
         //Quaternion.Euler(0, 0, 180),
@@ -118,6 +119,11 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     [SerializeField] private GameObject leftHandObject;
     private SkinnedMeshRenderer mainHand_skin;
 
+
+    //TBC
+    private bool in_valid_zone = false;
+    private int current_hit_counter = 0;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -143,8 +149,10 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
         if (!isSteering & currentTarget != null)
         {
-            float forward_displacement = Mathf.Abs(Vector3.Dot(currentTarget.transform.position - currentTarget_position_init, currentPath.transform.up)); // calculating displacement for starting traverse status
+            
+            float forward_displacement = Mathf.Abs(Vector3.Dot(currentTarget.transform.GetChild(0).transform.position - currentTarget_position_init, currentPath.transform.up)); // calculating displacement for starting traverse status
             // Check if movement along the forward vector is greater than 0.2 units
+            Debug.Log("displace: " + forward_displacement + " target pos: " + currentTarget.transform.position + " init pos: " + currentTarget_position_init + " for: "+ currentPath.transform.forward);
             if (forward_displacement > 0.025f) //0.2 is the init offset in NextTrial(), and 0.005 for the target thickness/2
             {
                 OnStartTraversing();
@@ -153,7 +161,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
         if (isSteering)
         {
-            float forward_displacement = Mathf.Abs(Vector3.Dot(currentTarget.transform.position - currentTarget_position_init, currentPath.transform.up)); // calculating displacement for ending traverse status
+            float forward_displacement = Mathf.Abs(Vector3.Dot(currentTarget.transform.GetChild(0).transform.position - currentTarget_position_init, currentPath.transform.up));
             // Check if movement along the forward vector is greater than 0.2 units
             if (forward_displacement > currentPath.transform.localScale.y * 2 + 0.005f) //*2 since the prefab is already x2 long (see create wire in NextTrial()). 0.005 is because of the ring thickness (=1) and ring plane is considered as the center of it 
             {
@@ -163,7 +171,8 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
             {
                 OnTraversingTracking();
             }
-            
+            Debug.Log("displace: " + forward_displacement);
+
         }
 
     }
@@ -244,6 +253,8 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
             currentTarget = Instantiate(ballPrefab, target_instant_position, rotation);
         }
         currentTarget.transform.forward = currentPath.transform.up; // to overcome problem regarding orientation of the ring-to be prependicular to wire
+
+        current_hit_counter = 0;
 
         Debug.Log($"Trial {currentTrial + 1} started: P= {mainHand} L = {len}, W = {width}, Rotation = {rotation.eulerAngles}");
 
@@ -376,6 +387,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
         //play success sound
         AudioSource.PlayClipAtPoint(success_sound, Camera.main.transform.position);
+        Debug.Log("HITS: " + current_hit_counter);
 
         NextTrial();
 
@@ -438,6 +450,26 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
             (shuffledRot[i], shuffledRot[randIndex]) = (shuffledRot[randIndex], shuffledRot[i]);
         }
         return shuffledRot;
+    }
+
+    public void OnHitBoundaries()
+    {
+        Debug.Log("exit");
+        if (in_valid_zone)
+        {
+            current_hit_counter++;
+            AudioSource.PlayClipAtPoint(error_sound, Camera.main.transform.position);
+        }
+        in_valid_zone = false;
+       
+
+
+    }
+
+    public void OnCorrectHit()
+    {
+        Debug.Log("enter");
+        in_valid_zone = true;
     }
 
 }

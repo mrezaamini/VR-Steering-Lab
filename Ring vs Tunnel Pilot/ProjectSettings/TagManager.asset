@@ -9,6 +9,12 @@ TagManager:
   - StartPoint
   - EndPoint
   - RingBound
+  - Locomotion
+  - PassThrough
+  - PassThroughButton
+  - LocoButton
+  - LocoText
+  - SteeringPath
   layers:
   - Default
   - TransparentFX
