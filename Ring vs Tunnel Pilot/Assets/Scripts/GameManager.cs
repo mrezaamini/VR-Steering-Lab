@@ -15,8 +15,8 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     [SerializeField] private List<GameObject> ringPrefabs;
 
     [Header("Ball and Tunnel")]
-    public GameObject ballPrefab;
-    [SerializeField] private GameObject tunnelPrefab;
+    [SerializeField] private List<GameObject> ballPrefabs;
+    [SerializeField] private List<GameObject> tunnelPrefabs;
 
     [Header("UI")]
     public AudioClip success_sound;
@@ -234,8 +234,8 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         else
         {
             //instantiate tunnel
-            currentPath = Instantiate(tunnelPrefab, targetPosition, rotation);
-            currentPath.transform.localScale = new Vector3(width, len / 2, width); // len/2 because the prefab is already 2 units long
+            currentPath = Instantiate(SelectTunPrefab(width), targetPosition, rotation);
+            currentPath.transform.localScale = new Vector3(width+0.01f, len / 2, width + 0.01f); // len/2 because the prefab is already 2 units long. +0.01f to adjust tunnel width based on the ball thickness
         }
 
         //create target
@@ -250,7 +250,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         }
         else
         {
-            currentTarget = Instantiate(ballPrefab, target_instant_position, rotation);
+            currentTarget = Instantiate(SelectBallPrefab(width), target_instant_position, rotation);
         }
         currentTarget.transform.forward = currentPath.transform.up; // to overcome problem regarding orientation of the ring-to be prependicular to wire
 
@@ -260,7 +260,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
         //saving tracking information as output for each trial
         string trackingOutputPath = Path.Combine(Application.dataPath, "CapturedData");
-        string trackingOutputName = $"P{participantID}_T{currentTrial + 1}_wireTrack.csv";
+        string trackingOutputName = $"P{participantID}_wireTracks.csv";
         trackingOutputFile = Path.Combine(trackingOutputPath, trackingOutputName);
         if (!Directory.Exists(trackingOutputPath))
         {
@@ -269,7 +269,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         }
         if (!File.Exists(trackingOutputFile))
         {
-            File.WriteAllText(trackingOutputFile, "PID,rightHanded,width,length,rotationX,rotationY,rotationZ,PositionX,PositionY\n");
+            File.WriteAllText(trackingOutputFile, "PID,taskType,rightHanded,width,length,rotationX,rotationY,rotationZ,trialRep,PositionX,PositionY\n");
         }
         else
         {
@@ -280,7 +280,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         trialR = rotation;
         trialW = width;
         trialTask = task_type;
-        tryCounter = 0;
+        //tryCounter = 0;
 
         //Rigidbody ring_rb = currentTarget.GetComponent<Rigidbody>();
         //ring_rb.constraints = RigidbodyConstraints.FreezeRotation;
@@ -307,6 +307,52 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         }
 
         return selectedRingPrefab;
+    }
+
+    GameObject SelectBallPrefab(float W)
+    {
+        GameObject selectedBallPrefab = null;
+
+        switch (W)
+        {
+            case 0.02f:
+                selectedBallPrefab = ballPrefabs[0];
+                break;
+            case 0.04f:
+                selectedBallPrefab = ballPrefabs[1];
+                break;
+            case 0.08f:
+                selectedBallPrefab = ballPrefabs[2];
+                break;
+            default:
+                Debug.LogError("No ball prefab for W: " + W);
+                break;
+        }
+
+        return selectedBallPrefab;
+    }
+
+    GameObject SelectTunPrefab(float W)
+    {
+        GameObject selectedTunPrefab = null;
+
+        switch (W)
+        {
+            case 0.02f:
+                selectedTunPrefab = tunnelPrefabs[0];
+                break;
+            case 0.04f:
+                selectedTunPrefab = tunnelPrefabs[1];
+                break;
+            case 0.08f:
+                selectedTunPrefab = tunnelPrefabs[2];
+                break;
+            default:
+                Debug.LogError("No ball prefab for W: " + W);
+                break;
+        }
+
+        return selectedTunPrefab;
     }
 
 
@@ -337,6 +383,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         Vector3 ringCenter = currentTarget.transform.position;
 
         Vector3 wireRayStartPos = GetWireStartPoint().position;
+
         Ray wireRay = new Ray(wireRayStartPos, currentPath.transform.up);
         Plane ringPlane = new Plane(ringPlaneNormal, ringCenter);
         Vector3 intersectionPoint;
@@ -346,9 +393,6 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
             Vector3 localIntersection = intersectionPoint - ringCenter;
             float x = Vector3.Dot(localIntersection, currentTarget.transform.right);
             float y = Vector3.Dot(localIntersection, currentTarget.transform.up);
-
-            //debugText.updateText("x: " + x + " / y: " + y);
-            //saving tracking info to file
             SaveWireTrack(x, y);
         }
         else
@@ -360,7 +404,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
     private void SaveWireTrack(float x, float y) // add gender (shoulder breadth) to info trackings
     {
-        string newData = $"{participantID},{isRightHanded},{trialW},{trialL},{trialR.x},{trialR.y},{trialR.z},{x},{y}\n";
+        string newData = $"{participantID},{trialTask},{isRightHanded},{trialW},{trialL},{trialR.x},{trialR.y},{trialR.z},{trialRep},{x},{y}\n";
         File.AppendAllText(trackingOutputFile, newData);
     }
 

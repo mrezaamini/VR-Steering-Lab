@@ -17,8 +17,6 @@ GameObject:
   - component: {fileID: 3093802772074425385}
   - component: {fileID: 3387432293632593687}
   - component: {fileID: 7736242557853742501}
-  - component: {fileID: 4454916903624486849}
-  - component: {fileID: 3836612091711083616}
   m_Layer: 0
   m_Name: ball
   m_TagString: Untagged
@@ -257,30 +255,3 @@ MonoBehaviour:
   _movementProvider: {fileID: 0}
   _handAligment: 1
   _handGrabPoses: []
---- !u!114 &4454916903624486849
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7156060053805399220}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 94900559e72f2654ca112bf2fbc6f0c6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _customJoint: {fileID: 0}
-  _isKinematicGrab: 1
-  _rigidbodiesRoot: {fileID: 0}
---- !u!114 &3836612091711083616
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7156060053805399220}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a9c131c17e9ad404ea32b5b394d205ba, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
