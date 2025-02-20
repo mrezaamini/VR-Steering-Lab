@@ -26,7 +26,10 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
     private Vector3 targetPosition;
     public DebugText debugText;
+
+    // for saving data
     private string trackingOutputFile;
+    private int conditionID; // specify which condition participant is in (0-11)
     
     //current task info 
     private float trialW;
@@ -135,7 +138,8 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         }
 
         participantTrials = GenerateParticipantTrial(participantID);
-        Debug.Log("trialCount: " + participantTrials.Count);
+
+        //HOME TEST
         startExperiment();
     }
 
@@ -152,7 +156,6 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
             
             float forward_displacement = Mathf.Abs(Vector3.Dot(currentTarget.transform.GetChild(0).transform.position - currentTarget_position_init, currentPath.transform.up)); // calculating displacement for starting traverse status
             // Check if movement along the forward vector is greater than 0.2 units
-            Debug.Log("displace: " + forward_displacement + " target pos: " + currentTarget.transform.position + " init pos: " + currentTarget_position_init + " for: "+ currentPath.transform.forward);
             if (forward_displacement > 0.025f) //0.2 is the init offset in NextTrial(), and 0.005 for the target thickness/2
             {
                 OnStartTraversing();
@@ -171,8 +174,6 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
             {
                 OnTraversingTracking();
             }
-            Debug.Log("displace: " + forward_displacement);
-
         }
 
     }
@@ -189,7 +190,9 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         Vector3 cameraForward = mainCamera.transform.forward;
         Vector3 startPos = new Vector3(0f, mainCamera.transform.position.y, mainCamera.transform.position.z);
         scenePosition = startPos + cameraForward * offset_depth;
-        Debug.Log(startPos);
+        //HOME TEST
+        //only for home test ::
+        scenePosition = new Vector3(1f, 1f, 1f);
         calibrationStatus = true;
         NextTrial();
     }
@@ -256,25 +259,9 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
         current_hit_counter = 0;
 
-        Debug.Log($"Trial {currentTrial + 1} started: P= {mainHand} L = {len}, W = {width}, Rotation = {rotation.eulerAngles}");
 
         //saving tracking information as output for each trial
-        string trackingOutputPath = Path.Combine(Application.dataPath, "CapturedData");
-        string trackingOutputName = $"P{participantID}_wireTracks.csv";
-        trackingOutputFile = Path.Combine(trackingOutputPath, trackingOutputName);
-        if (!Directory.Exists(trackingOutputPath))
-        {
-            Debug.Log("Directory Not Found!! created new one");
-            Directory.CreateDirectory(trackingOutputPath);
-        }
-        if (!File.Exists(trackingOutputFile))
-        {
-            File.WriteAllText(trackingOutputFile, "PID,taskType,rightHanded,width,length,rotationX,rotationY,rotationZ,trialRep,PositionX,PositionY\n");
-        }
-        else
-        {
-            Debug.Log("WARNING: file already exists, overwritting!");
-        }
+        SetupSteeringTrackOutput(width, len, rotation, task_type, trialRep);
         //update trial info for saving tracking info in output file
         trialL = len;
         trialR = rotation;
@@ -356,33 +343,12 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     }
 
 
-    private Transform GetWireStartPoint()
-    {
-        Transform[] children = currentPath.GetComponentsInChildren<Transform>(true);
-        Transform startPoint = null;
-
-        foreach (Transform child in children)
-        {
-            if (child.CompareTag("StartPoint"))
-            {
-                startPoint = child;
-                break;
-            }
-        }
-        if (startPoint == null)
-        {
-            Debug.Log("No child with the specified tag found.");
-        }
-        return startPoint;
-    }
-
-
     private void OnTraversingTracking()
     {
         Vector3 ringPlaneNormal = currentTarget.transform.forward;
         Vector3 ringCenter = currentTarget.transform.position;
 
-        Vector3 wireRayStartPos = GetWireStartPoint().position;
+        Vector3 wireRayStartPos = currentTarget_position_init;
 
         Ray wireRay = new Ray(wireRayStartPos, currentPath.transform.up);
         Plane ringPlane = new Plane(ringPlaneNormal, ringCenter);
@@ -393,7 +359,9 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
             Vector3 localIntersection = intersectionPoint - ringCenter;
             float x = Vector3.Dot(localIntersection, currentTarget.transform.right);
             float y = Vector3.Dot(localIntersection, currentTarget.transform.up);
+            Debug.Log("hehe");
             SaveWireTrack(x, y);
+            
         }
         else
         {
@@ -405,7 +373,11 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     private void SaveWireTrack(float x, float y) // add gender (shoulder breadth) to info trackings
     {
         string newData = $"{participantID},{trialTask},{isRightHanded},{trialW},{trialL},{trialR.x},{trialR.y},{trialR.z},{trialRep},{x},{y}\n";
-        File.AppendAllText(trackingOutputFile, newData);
+        using (StreamWriter writer = new StreamWriter(trackingOutputFile, true))
+        {
+            writer.WriteLine(newData);
+            writer.Flush();  
+        }
     }
 
     public void EndTrial() // to end a trial and move to the next one
@@ -415,8 +387,6 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         // destroy previous trial objects
         if (currentTarget != null) Destroy(currentTarget);
         if (currentPath != null) Destroy(currentPath);
-
-        Debug.Log("OBJ deleted");
 
         currentTrial++;
 
@@ -431,7 +401,6 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
         //play success sound
         AudioSource.PlayClipAtPoint(success_sound, Camera.main.transform.position);
-        Debug.Log("HITS: " + current_hit_counter);
 
         NextTrial();
 
@@ -439,7 +408,6 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
     public void OnStartTraversing()
     {
-        Debug.Log("traversing started");
 
         isSteering = true;
         if (isRightHanded)
@@ -457,6 +425,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     public List<(bool, Vector2, Quaternion)> GenerateParticipantTrial(int PID)
     {
         int CB_start = PID % 12;
+        conditionID = CB_start;
 
         List<(bool, Vector2, Quaternion)> trials = new List<(bool, Vector2, Quaternion)>(); // list of IDs and Rotations
 
@@ -498,7 +467,6 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
     public void OnHitBoundaries()
     {
-        Debug.Log("exit");
         if (in_valid_zone)
         {
             current_hit_counter++;
@@ -512,8 +480,55 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
     public void OnCorrectHit()
     {
-        Debug.Log("enter");
         in_valid_zone = true;
+    }
+
+    private void SetupSteeringTrackOutput(float trial_w, float trial_l, Quaternion trial_rot, bool trial_task_type, int trial_repetition)
+    {
+        // Find condition ID
+        int conditionIndex = exp_conditions.IndexOf((trial_task_type, trial_l, trial_w));
+        if (conditionIndex == -1)
+        {
+            Debug.LogError("Invalid trial conditions provided.");
+            return;
+        }
+        string conditionString = $"C{conditionIndex}";
+
+        // Find rotation ID
+        string rotationString = "UnknownRot";
+        for (int i = 0; i < pathRotations.Count; i++)
+        {
+            if (Quaternion.Angle(trial_rot, pathRotations[i]) < 1f) // Allow small floating-point differences
+            {
+                rotationString = $"Rot{i}";
+                break;
+            }
+        }
+
+        // Assign repetition string
+        string repetitionString = $"Rep{trial_repetition}";
+
+        // Construct and return the file identifier
+        string trackingOutputPath = Path.Combine(Application.dataPath, "CapturedData");
+        string trackingOutputName = $"{participantID}_{conditionString}_{rotationString}_{repetitionString}_Track.csv";
+        trackingOutputFile = Path.Combine(trackingOutputPath, trackingOutputName);
+        if (!Directory.Exists(trackingOutputPath))
+        {
+            Debug.Log("Directory Not Found!! created new one");
+            Directory.CreateDirectory(trackingOutputPath);
+        }
+        if (!File.Exists(trackingOutputFile))
+        {
+            using (StreamWriter writer = new StreamWriter(trackingOutputFile, true))
+            {
+                writer.WriteLine("PID,taskType,rightHanded,width,length,rotationX,rotationY,rotationZ,trialRep,PositionX,PositionY");
+                writer.Flush();
+            }
+        }
+        else
+        {
+            Debug.Log("WARNING: file already exists, overwritting!");
+        }
     }
 
 }
