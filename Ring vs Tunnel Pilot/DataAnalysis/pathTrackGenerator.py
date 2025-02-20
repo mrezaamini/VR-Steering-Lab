@@ -1,12 +1,14 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 
+# Directory containing the data files
+data_dir = '../Assets/CapturedData/'
 
 # Load the CSV file
 def load_data(file_path):
     return pd.read_csv(file_path)
-
 
 # Function to process the file and plot each unique trial
 def process_tracks(file_path):
@@ -21,12 +23,10 @@ def process_tracks(file_path):
 
     for trial_id, trial_data in grouped:
         width = trial_data['width'].iloc[0]  # Get the width for the circle diameter
-        plot_track(trial_data, trial_id, width)
-
-
+        plot_track(trial_data, trial_id, width, file_path)
 
 # Function to plot a single track trial
-def plot_track(trial_data, trial_id, width):
+def plot_track(trial_data, trial_id, width, file_path):
     plt.figure(figsize=(6, 6))
 
     # Scatter plot of positions
@@ -39,13 +39,19 @@ def plot_track(trial_data, trial_id, width):
     # Labels and title
     plt.xlabel('PositionX')
     plt.ylabel('PositionY')
-    plt.title(f'Track Trial: {trial_id}')
+    plt.title(f'File: {os.path.basename(file_path)}')
     plt.legend()
 
     # Show the plot
     plt.show()
 
+# Process all CSV files in the directory except those containing 'summary'
+def process_all_files(directory):
+    for filename in os.listdir(directory):
+        if filename.endswith('.csv') and 'summary' not in filename.lower():
+            file_path = os.path.join(directory, filename)
+            print(f'Processing file: {filename}')
+            process_tracks(file_path)
 
-
-# Example usage (replace 'your_file.csv' with the actual filename)
-process_tracks('../Assets/CapturedData/P0_wireTracks.csv')
+# Run the processing on all valid files
+process_all_files(data_dir)
