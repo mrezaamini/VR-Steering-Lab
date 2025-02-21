@@ -31,8 +31,8 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     // for saving data
     private string trackingOutputFile;
     private string steeringInfoOutputFile;
-    private float SteeringTime_trial;
-    private float errorTime_trial;
+    private double SteeringTime_trial;
+    private double errorTime_trial;
     private int errorNumber_trial;
     private Stopwatch steeringSW;
     private Stopwatch errorSW;
@@ -131,7 +131,6 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
     //TBC
     private bool in_valid_zone = false;
-    private int current_hit_counter = 0;
 
     // Start is called before the first frame update
     void Start()
@@ -144,14 +143,17 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         }
 
         participantTrials = GenerateParticipantTrial(participantID);
+        steeringSW = new Stopwatch();
+        errorSW = new Stopwatch();
 
         //HOME TEST
-        startExperiment();
+        //startExperiment();
     }
 
     // Update is called once per frame
     void Update()
     {
+        debugText.updateText("stat: "+in_valid_zone+ " "+isSteering);
         if (!calibrationStatus)
         {
             return;
@@ -198,7 +200,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         scenePosition = startPos + cameraForward * offset_depth;
         //HOME TEST
         //only for home test ::
-        scenePosition = new Vector3(1f, 1f, 1f);
+        //scenePosition = new Vector3(1f, 1f, 1f);
         //////
         SetupSteeringInfoOutput();
         calibrationStatus = true;
@@ -232,9 +234,6 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         // adjusting center of placements
         targetPosition = new Vector3(scenePosition.x + (mainHand * offset_lateral), scenePosition.y - offset_height, scenePosition.z);
 
-        // update debug text
-        debugText.updateText("length: " + len);
-
         // create path
         if (task_type)
         {
@@ -265,9 +264,6 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         }
         currentTarget.transform.forward = currentPath.transform.up; // to overcome problem regarding orientation of the ring-to be prependicular to wire
 
-        current_hit_counter = 0;
-
-
         //saving tracking information as output for each trial
         SetupSteeringTrackOutput(width, len, rotation, task_type, trialRep);
         //update trial info for saving tracking info in output file
@@ -278,6 +274,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         SteeringTime_trial = 0f;
         errorNumber_trial = 0;
         errorTime_trial = 0f;
+        in_valid_zone = false;
         //tryCounter = 0;
 
         //Rigidbody ring_rb = currentTarget.GetComponent<Rigidbody>();
@@ -398,6 +395,12 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
     public void EndTrial() // to end a trial and move to the next one
     {
+        //stoping and saving timers
+        steeringSW.Stop();
+        SteeringTime_trial = steeringSW.Elapsed.TotalMilliseconds;
+        errorSW.Stop(); // to make sure it is stopped at the end
+        errorTime_trial += errorSW.Elapsed.TotalMilliseconds;
+        WriteSteeringInfoData();
 
         isSteering = false;
         // destroy previous trial objects
@@ -434,6 +437,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         {
             leftHandObject.GetComponent<SkinnedMeshRenderer>().material = invisibleHand_material;
         }
+        steeringSW.Restart();
 
     }
 
@@ -482,20 +486,23 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
     public void OnHitBoundaries()
     {
-        if (in_valid_zone)
+        if (isSteering)
         {
-            current_hit_counter++;
+            errorNumber_trial++;
             AudioSource.PlayClipAtPoint(error_sound, Camera.main.transform.position);
+            errorSW.Restart();
         }
         in_valid_zone = false;
-       
-
-
     }
 
     public void OnCorrectHit()
     {
         in_valid_zone = true;
+        if (isSteering)
+        {
+            errorSW.Stop();
+            errorTime_trial += errorSW.Elapsed.TotalMilliseconds;
+        }
     }
 
     private void SetupSteeringTrackOutput(float trial_w, float trial_l, Quaternion trial_rot, bool trial_task_type, int trial_repetition)

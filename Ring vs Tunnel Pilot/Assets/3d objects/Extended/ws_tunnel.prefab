@@ -98,7 +98,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1946322341100585856, guid: 6e9069019b670c347a90d092a691aad9, type: 3}
       propertyPath: m_Height
-      value: 2.1
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1946322341100585856, guid: 6e9069019b670c347a90d092a691aad9, type: 3}
       propertyPath: m_Enabled
@@ -199,3 +199,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cf0a8d00154f53d4abe7c80c9b8a2379, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  gameManager: {fileID: 0}
