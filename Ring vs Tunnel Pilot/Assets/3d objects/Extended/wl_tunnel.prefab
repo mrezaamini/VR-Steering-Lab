@@ -94,7 +94,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1946322341100585856, guid: 6e9069019b670c347a90d092a691aad9, type: 3}
       propertyPath: m_Height
-      value: 2.7
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1946322341100585856, guid: 6e9069019b670c347a90d092a691aad9, type: 3}
       propertyPath: m_IsTrigger

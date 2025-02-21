@@ -94,7 +94,6 @@ GameObject:
   - component: {fileID: 4609170000150960386}
   - component: {fileID: 6377524593385645244}
   - component: {fileID: 8691021939599903472}
-  - component: {fileID: 5005139062978783620}
   m_Layer: 0
   m_Name: Wire
   m_TagString: SteeringPath
@@ -189,7 +188,7 @@ CapsuleCollider:
   m_Enabled: 1
   serializedVersion: 2
   m_Radius: 0.5000001
-  m_Height: 2
+  m_Height: 3
   m_Direction: 1
   m_Center: {x: 0.000000059604645, y: 0, z: -0.00000008940697}
 --- !u!54 &8691021939599903472
@@ -219,20 +218,6 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 1
---- !u!114 &5005139062978783620
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4070905180455124837}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6448387a50082fa4d951955979c41ad5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  gameManager: {fileID: 0}
-  error_sound: {fileID: 8300000, guid: 7d140901250504c4a9a2d21c26dc5e03, type: 3}
 --- !u!1 &6920123463072959321
 GameObject:
   m_ObjectHideFlags: 0
