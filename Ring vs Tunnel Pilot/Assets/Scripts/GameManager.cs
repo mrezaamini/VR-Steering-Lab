@@ -14,10 +14,14 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     [Header("Ring and Wire")]
     public GameObject wirePrefab;
     [SerializeField] private List<GameObject> ringPrefabs;
+    [SerializeField] private Material wire_normal_mat;
+    [SerializeField] private Material wire_error_mat;
 
     [Header("Ball and Tunnel")]
     [SerializeField] private List<GameObject> ballPrefabs;
     [SerializeField] private List<GameObject> tunnelPrefabs;
+    [SerializeField] private Material tun_normal_mat;
+    [SerializeField] private Material tun_error_mat;
 
     [Header("UI")]
     public AudioClip success_sound;
@@ -490,6 +494,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         {
             errorNumber_trial++;
             AudioSource.PlayClipAtPoint(error_sound, Camera.main.transform.position);
+            OnHitVisualFeedback(trialTask);
             errorSW.Restart();
         }
         in_valid_zone = false;
@@ -502,6 +507,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         {
             errorSW.Stop();
             errorTime_trial += errorSW.Elapsed.TotalMilliseconds;
+            OnCorrectVisualFeedback(trialTask);
         }
     }
 
@@ -582,6 +588,36 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         using (StreamWriter writer = new StreamWriter(steeringInfoOutputFile, true))
         {
             writer.WriteLine(newData);
+        }
+    }
+
+    private void OnHitVisualFeedback(bool path_type) // path type true for wire, false for tunnel
+    {
+        Renderer path_renderer = currentPath.GetComponent<Renderer>();
+        if (path_type)
+        {
+            // change color of the wire to red
+            path_renderer.material = wire_error_mat;
+        }
+        else
+        {
+            // change color of the tunnel to red
+            path_renderer.material = tun_error_mat;
+        }
+    }
+
+    private void OnCorrectVisualFeedback(bool path_type) // path type true for wire, false for tunnel
+    {
+        Renderer path_renderer = currentPath.GetComponent<Renderer>();
+        if (path_type)
+        {
+            // change color of the wire to normal
+            path_renderer.material = wire_normal_mat;
+        }
+        else
+        {
+            // change color of the tunnel to normal
+            path_renderer.material = tun_normal_mat;
         }
     }
 
