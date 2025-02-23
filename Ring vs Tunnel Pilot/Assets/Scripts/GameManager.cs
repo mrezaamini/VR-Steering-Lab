@@ -80,7 +80,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     private List<Quaternion> pathRotations = new List<Quaternion> { 
          // z-plane
         //Quaternion.Euler(0, 0, 0),
-        Quaternion.Euler(0, 0, 45),
+        //Quaternion.Euler(0, 0, 45),
         //Quaternion.Euler(0, 0, 90),
         //Quaternion.Euler(0, 0, 135),
         //Quaternion.Euler(0, 0, 180),
@@ -106,7 +106,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         //Quaternion.Euler(0, 315, 45),
         //// 3d-diagonal down
         //Quaternion.Euler(0, 45, 135),
-        //Quaternion.Euler(0, 135, 135),
+        Quaternion.Euler(0, 135, 135),
         //Quaternion.Euler(0, 225, 135),
         //Quaternion.Euler(0, 315, 135)
     };
@@ -384,7 +384,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
     private void SaveWireTrack(float x, float y) // write tracking information to file
     {
-        string newData = $"{participantID},{trialTask},{isRightHanded},{trialW},{trialL},{trialR.x},{trialR.y},{trialR.z},{trialRep},{x},{y}\n";
+        string newData = $"{participantID},{trialTask},{isRightHanded},{trialW},{trialL},{GetPathRotationID(trialR)},{trialRep},{x},{y}\n";
         using (StreamWriter writer = new StreamWriter(trackingOutputFile, true))
         {
             writer.WriteLine(newData);
@@ -402,8 +402,12 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         //stoping and saving timers
         steeringSW.Stop();
         SteeringTime_trial = steeringSW.Elapsed.TotalMilliseconds;
+        steeringSW.Reset();
+
         errorSW.Stop(); // to make sure it is stopped at the end
         errorTime_trial += errorSW.Elapsed.TotalMilliseconds;
+        errorSW.Reset();
+
         WriteSteeringInfoData();
 
         isSteering = false;
@@ -507,8 +511,24 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         {
             errorSW.Stop();
             errorTime_trial += errorSW.Elapsed.TotalMilliseconds;
+            errorSW.Reset();
             OnCorrectVisualFeedback(trialTask);
         }
+    }
+
+    // to find the rotation ID (rot<index in list of rotations) for data naming
+    private string GetPathRotationID(Quaternion trial_rot)
+    {
+        string rotationString = "UnknownRot";
+        for (int i = 0; i < pathRotations.Count; i++)
+        {
+            if (Quaternion.Angle(trial_rot, pathRotations[i]) < 1f) // Allow small floating-point differences
+            {
+                rotationString = $"Rot{i}";
+                break;
+            }
+        }
+        return rotationString;
     }
 
     private void SetupSteeringTrackOutput(float trial_w, float trial_l, Quaternion trial_rot, bool trial_task_type, int trial_repetition)
@@ -523,15 +543,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         string conditionString = $"C{conditionIndex}";
 
         // Find rotation ID
-        string rotationString = "UnknownRot";
-        for (int i = 0; i < pathRotations.Count; i++)
-        {
-            if (Quaternion.Angle(trial_rot, pathRotations[i]) < 1f) // Allow small floating-point differences
-            {
-                rotationString = $"Rot{i}";
-                break;
-            }
-        }
+        string rotationString = GetPathRotationID(trial_rot);
 
         // Assign repetition string
         string repetitionString = $"Rep{trial_repetition}";
@@ -549,7 +561,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         {
             using (StreamWriter writer = new StreamWriter(trackingOutputFile, true))
             {
-                writer.WriteLine("PID,taskType,rightHanded,width,length,rotationX,rotationY,rotationZ,trialRep,PositionX,PositionY");
+                writer.WriteLine("PID,taskType,rightHanded,width,length,rotation,trialRep,PositionX,PositionY");
             }
         }
         else
@@ -572,7 +584,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         {
             using (StreamWriter writer = new StreamWriter(steeringInfoOutputFile, true))
             {
-                writer.WriteLine("PID,isMale,rightHanded,taskType,width,length,rotationX,rotationY,rotationZ,trialRep,totalTime,errorTime,errorNumber");
+                writer.WriteLine("PID,isMale,rightHanded,taskType,width,length,rotation,trialRep,totalTime,errorTime,errorNumber");
             }
         }
         else
@@ -584,7 +596,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     private void WriteSteeringInfoData()
     {
         //should be managed: totalTime, errorTime, errorNumber
-        string newData = $"{participantID},{isMale},{isRightHanded},{trialTask},{trialW},{trialL},{trialR.x},{trialR.y},{trialR.z},{trialRep},{SteeringTime_trial},{errorTime_trial},{errorNumber_trial}\n";
+        string newData = $"{participantID},{isMale},{isRightHanded},{trialTask},{trialW},{trialL},{GetPathRotationID(trialR)},{trialRep},{SteeringTime_trial},{errorTime_trial},{errorNumber_trial}\n";
         using (StreamWriter writer = new StreamWriter(steeringInfoOutputFile, true))
         {
             writer.WriteLine(newData);
