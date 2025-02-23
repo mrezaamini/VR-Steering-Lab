@@ -79,36 +79,36 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
     private List<Quaternion> pathRotations = new List<Quaternion> { 
          // z-plane
-        //Quaternion.Euler(0, 0, 0),
-        //Quaternion.Euler(0, 0, 45),
-        //Quaternion.Euler(0, 0, 90),
-        //Quaternion.Euler(0, 0, 135),
-        //Quaternion.Euler(0, 0, 180),
-        //Quaternion.Euler(0, 0, 225),
-        //Quaternion.Euler(0, 0, 270),
-        //Quaternion.Euler(0, 0, 315),
+        Quaternion.Euler(0, 0, 0),
+        Quaternion.Euler(0, 0, 45),
+        Quaternion.Euler(0, 0, 90),
+        Quaternion.Euler(0, 0, 135),
+        Quaternion.Euler(0, 0, 180),
+        Quaternion.Euler(0, 0, 225),
+        Quaternion.Euler(0, 0, 270),
+        Quaternion.Euler(0, 0, 315),
         //// x-plane
-        //Quaternion.Euler(45, 0, 0),
-        //Quaternion.Euler(90, 0, 0),
-        //Quaternion.Euler(135, 0, 0),
-        //Quaternion.Euler(225, 0, 0),
-        //Quaternion.Euler(270, 0, 0),
-        //Quaternion.Euler(315, 0, 0),
+        Quaternion.Euler(45, 0, 0),
+        Quaternion.Euler(90, 0, 0),
+        Quaternion.Euler(135, 0, 0),
+        Quaternion.Euler(225, 0, 0),
+        Quaternion.Euler(270, 0, 0),
+        Quaternion.Euler(315, 0, 0),
         //// y-plane
-        //Quaternion.Euler(0, 45, 90),
-        //Quaternion.Euler(0, 135, 90),
-        //Quaternion.Euler(0, 225, 90),
-        //Quaternion.Euler(0, 315, 90),
+        Quaternion.Euler(0, 45, 90),
+        Quaternion.Euler(0, 135, 90),
+        Quaternion.Euler(0, 225, 90),
+        Quaternion.Euler(0, 315, 90),
         //// 3d-diagonal up
-        //Quaternion.Euler(0, 45, 45),
-        //Quaternion.Euler(0, 135, 45),
-        //Quaternion.Euler(0, 225, 45),
-        //Quaternion.Euler(0, 315, 45),
+        Quaternion.Euler(0, 45, 45),
+        Quaternion.Euler(0, 135, 45),
+        Quaternion.Euler(0, 225, 45),
+        Quaternion.Euler(0, 315, 45),
         //// 3d-diagonal down
-        //Quaternion.Euler(0, 45, 135),
+        Quaternion.Euler(0, 45, 135),
         Quaternion.Euler(0, 135, 135),
-        //Quaternion.Euler(0, 225, 135),
-        //Quaternion.Euler(0, 315, 135)
+        Quaternion.Euler(0, 225, 135),
+        Quaternion.Euler(0, 315, 135)
     };
 
     // target placement attributes
