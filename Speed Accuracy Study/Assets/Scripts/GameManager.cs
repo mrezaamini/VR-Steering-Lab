@@ -135,7 +135,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         errorSW = new Stopwatch();
 
         //HOME TEST
-        startExperiment();
+        //startExperiment();
     }
 
     // Update is called once per frame
@@ -188,7 +188,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         scenePosition = startPos + cameraForward * offset_depth;
         //HOME TEST
         //only for home test ::
-        scenePosition = new Vector3(1f, 1f, 1f);
+        //scenePosition = new Vector3(1f, 1f, 1f);
         //////
         SetupSteeringInfoOutput();
         calibrationStatus = true;
