@@ -13915,9 +13915,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9a0adf505875460468e721ad1cd55c2f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  participantID: 1
+  participantID: 0
   isMale: 0
-  isRightHanded: 1
+  isRightHanded: 0
   wirePrefab: {fileID: 4070905180455124837, guid: 44ae866ed43fd5f4295adb835cf482a0, type: 3}
   ringPrefabs:
   - {fileID: 6165312679950028759, guid: 17ff3a3480b7d744c87e19fad109ce50, type: 3}

@@ -155,19 +155,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2680301183703624508, guid: 080a8cb87954131448ad88fbc83e2c8d, type: 3}
       propertyPath: _constraints.MaxX.Value
-      value: 0.022
+      value: 0.025
       objectReference: {fileID: 0}
     - target: {fileID: 2680301183703624508, guid: 080a8cb87954131448ad88fbc83e2c8d, type: 3}
       propertyPath: _constraints.MaxY.Value
-      value: 0.022
+      value: 0.025
       objectReference: {fileID: 0}
     - target: {fileID: 2680301183703624508, guid: 080a8cb87954131448ad88fbc83e2c8d, type: 3}
       propertyPath: _constraints.MinX.Value
-      value: -0.022
+      value: -0.025
       objectReference: {fileID: 0}
     - target: {fileID: 2680301183703624508, guid: 080a8cb87954131448ad88fbc83e2c8d, type: 3}
       propertyPath: _constraints.MinY.Value
-      value: -0.022
+      value: -0.025
       objectReference: {fileID: 0}
     - target: {fileID: 2680301183703624508, guid: 080a8cb87954131448ad88fbc83e2c8d, type: 3}
       propertyPath: _constraints.MaxX.Constrain
