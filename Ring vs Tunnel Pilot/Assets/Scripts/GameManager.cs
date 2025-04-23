@@ -459,7 +459,8 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         for (int i = CB_start; i < exp_conditions.Count; i++)
         {
             Vector2 index_diff = new Vector2(exp_conditions[i].Item2, exp_conditions[i].Item3);
-            List<Quaternion> shuffled_rotations = ShuffleRotations(pathRotations);
+            //List<Quaternion> shuffled_rotations = ShuffleRotations(pathRotations);
+            List<Quaternion> shuffled_rotations = pathRotations;
             foreach (Quaternion rotation in shuffled_rotations)
             {
                 trials.Add((exp_conditions[i].Item1, index_diff, rotation));

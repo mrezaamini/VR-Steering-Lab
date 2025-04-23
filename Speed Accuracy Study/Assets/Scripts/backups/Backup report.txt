@@ -1,0 +1,3 @@
+===SUMMARY OF THE BACK UP FILES====
+
+1. GameManager.c : in each pilot study ring looks for game manager, so the main game manager is moved here. everytime based on the experiment (if its one of the pilots or the main study), actual game manager code will be stored here so the rest of the game can be run with the new logic that is copy pasted into scripts/gameManager
