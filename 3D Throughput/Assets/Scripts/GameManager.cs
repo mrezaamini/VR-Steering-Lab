@@ -52,6 +52,8 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     private GameObject currentPath;
     private GameObject currentTarget;
     private int trialExecType; // 0: fast, 1: as fast and accurate, 1: accurate
+    private Vector3? previous_track;
+    private double? previous_time;
 
 
     //private GameObject currentPath;
@@ -101,6 +103,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     private float offset_height = 0.15f;
     private float mainHand; // multiplier of the lateral offset to adjust dominant hand position
     private Vector3 scenePosition;
+    private float target_placement_offset = 0.02f;
 
     private GameObject mainCamera;
     private bool calibrationStatus = false; //should be false at start
@@ -152,7 +155,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
             
             float forward_displacement = Mathf.Abs(Vector3.Dot(currentTarget.transform.GetChild(0).transform.position - currentTarget_position_init, currentPath.transform.up)); // calculating displacement for starting traverse status
             // Check if movement along the forward vector is greater than 0.2 units
-            if (forward_displacement > 0.025f) //0.2 is the init offset in NextTrial(), and 0.005 for the target thickness/2
+            if (forward_displacement > 0.0195f) //0.2 is the init offset in NextTrial(), and 0.005 for the target thickness/2
             {
                 OnStartTraversing();
             }
@@ -160,15 +163,16 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
         if (isSteering)
         {
+            OnTraversingTracking();
             float forward_displacement = Mathf.Abs(Vector3.Dot(currentTarget.transform.GetChild(0).transform.position - currentTarget_position_init, currentPath.transform.up));
             // Check if movement along the forward vector is greater than 0.2 units
-            if (forward_displacement > currentPath.transform.localScale.y * 2 + 0.005f) //*2 since the prefab is already x2 long (see create wire in NextTrial()). 0.005 is because of the ring thickness (=1) and ring plane is considered as the center of it 
+            if (forward_displacement > currentPath.transform.localScale.y * 2 + 0.02f) //*2 since the prefab is already x2 long (see create wire in NextTrial()). 0.005 is because of the ring thickness (=1) and ring plane is considered as the center of it 
             {
                 EndTrial();
             }
             else
             {
-                OnTraversingTracking();
+                //OnTraversingTracking();
             }
         }
 
@@ -238,7 +242,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
         //create target
         Vector3 pathForward = currentPath.transform.up;
-        float target_offset_init = len / 2 + 0.02f;
+        float target_offset_init = len / 2 + target_placement_offset;
         Vector3 target_instant_position = targetPosition - target_offset_init * pathForward;
         currentTarget_position_init = target_instant_position; // saving ring start point for PLAN B of traverse status calculation
 
@@ -265,6 +269,8 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         in_valid_zone = false;
         //tryCounter = 0;
         trialExecType = execType;
+        previous_track = null;
+        previous_time = null;
 
         switch (trialExecType)
         {
@@ -367,27 +373,54 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         Ray wireRay = new Ray(wireRayStartPos, currentPath.transform.up);
         Plane ringPlane = new Plane(ringPlaneNormal, ringCenter);
         Vector3 intersectionPoint;
-        float targetSpeed = currentTarget.GetComponent<Rigidbody>().velocity.magnitude;
+        float targetSpeed = currentTarget.transform.GetChild(0).GetComponent<Rigidbody>().velocity.magnitude;
         if (ringPlane.Raycast(wireRay, out float intr))
         {
             intersectionPoint = wireRay.GetPoint(intr);
             Vector3 localIntersection = intersectionPoint - ringCenter;
             float x = Vector3.Dot(localIntersection, currentTarget.transform.GetChild(0).transform.right);
             float y = Vector3.Dot(localIntersection, currentTarget.transform.GetChild(0).transform.up);
-            SaveWireTrack(x, y, targetSpeed);
+
+            Vector3 wireDirection = currentPath.transform.up.normalized;
+            float z = Vector3.Dot(ringCenter - currentPath.transform.position, wireDirection) + trialL/2; //make it greater than 0
             
+            SaveWireTrack(x, y, z);
+
+
+
+
         }
         else
         {
-            //debugText.updateText("no intersection found");
-        }
-
+             debugText.updateText("no intersection found");
+        }                                          
+                     
     }
 
-    private void SaveWireTrack(float x, float y, float s) // write tracking information to file: position x, position y, speed
+    private void SaveWireTrack(float x, float y, float z) // write tracking information to file: position x, position y, speed
     {
         double input_time = steeringSW.Elapsed.TotalMilliseconds;
-        string newData = $"{participantID},{trialTask},{isRightHanded},{trialW},{trialL},{GetPathRotationID(trialR)},{trialExecType},{trialRep},{x},{y},{s},{input_time}\n";
+        double elapsed_time = 0.0d;
+        double movement_speed = 0.0d;
+        Vector3 displacement_position = new Vector3(x, y, z);
+        Vector3 movement_vector = Vector3.zero;
+        if (previous_track.HasValue)
+        {
+            movement_vector = displacement_position - previous_track.Value;
+        }
+        previous_track = new Vector3(x, y, z);
+
+        if (previous_time.HasValue)
+        {
+            elapsed_time = input_time - previous_time.Value;
+            movement_speed = movement_vector.magnitude*1000 / elapsed_time;
+        }
+        previous_time = input_time;
+        
+        string newData = $"{participantID},{trialTask},{isRightHanded},{trialW},{trialL},{GetPathRotationID(trialR)},{trialExecType},{trialRep},{x},{y},{z},{movement_vector.magnitude},{movement_speed},{input_time}\n";
+
+        
+
         using (StreamWriter writer = new StreamWriter(trackingOutputFile, true))
         {
             writer.WriteLine(newData);
@@ -568,7 +601,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         {
             using (StreamWriter writer = new StreamWriter(trackingOutputFile, true))
             {
-                writer.WriteLine("PID,taskType,rightHanded,width,length,rotation,execType,trialRep,PositionX,PositionY,Speed,Timestamp");
+                writer.WriteLine("PID,taskType,rightHanded,width,length,rotation,execType,trialRep,PositionX,PositionY,PositionZ,Movement,Speed,Timestamp");
             }
         }
         else
