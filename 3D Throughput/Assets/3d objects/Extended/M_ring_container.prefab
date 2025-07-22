@@ -171,23 +171,23 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2680301183703624508, guid: 080a8cb87954131448ad88fbc83e2c8d, type: 3}
       propertyPath: _constraints.MaxX.Constrain
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2680301183703624508, guid: 080a8cb87954131448ad88fbc83e2c8d, type: 3}
       propertyPath: _constraints.MaxY.Constrain
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2680301183703624508, guid: 080a8cb87954131448ad88fbc83e2c8d, type: 3}
       propertyPath: _constraints.MinX.Constrain
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2680301183703624508, guid: 080a8cb87954131448ad88fbc83e2c8d, type: 3}
       propertyPath: _constraints.MinY.Constrain
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2680301183703624508, guid: 080a8cb87954131448ad88fbc83e2c8d, type: 3}
       propertyPath: _constraints.ConstraintsAreRelative
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
