@@ -31,6 +31,8 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
     private Vector3 targetPosition;
     public DebugText debugText;
+    public StateText stateText;
+    public CanvasPopup popupScript;
 
     // for saving data
     private string trackingOutputFile;
@@ -42,6 +44,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     private Stopwatch errorSW;
 
     //current task info 
+    private bool trial_verification = false;
     private float trialW;
     private float trialL;
     private Quaternion trialR;
@@ -66,47 +69,50 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     // experiment conditions
     private List<(bool, float, float, int)> exp_conditions = new List<(bool, float, float, int)> // task dificulty (true: ring, false: tunnel), L, W, execution types (0: fast, 1: fast and accurate, 2: accurate)
     {
-        (true, 0.25f, 0.02f, 0),
-        (true, 0.25f, 0.04f, 0),
+        //(true, 0.25f, 0.02f, 0),
+        //(true, 0.25f, 0.04f, 0),
         (true, 0.25f, 0.08f, 0),
-        (true, 0.40f, 0.02f, 0),
-        (true, 0.40f, 0.04f, 0),
+        //(true, 0.40f, 0.02f, 0),
+        //(true, 0.40f, 0.04f, 0),
         (true, 0.40f, 0.08f, 0),
-        (true, 0.25f, 0.02f, 1),
-        (true, 0.25f, 0.04f, 1),
-        (true, 0.25f, 0.08f, 1),
-        (true, 0.40f, 0.02f, 1),
-        (true, 0.40f, 0.04f, 1),
-        (true, 0.40f, 0.08f, 1),
-        (true, 0.25f, 0.02f, 2),
-        (true, 0.25f, 0.04f, 2),
-        (true, 0.25f, 0.08f, 2),
-        (true, 0.40f, 0.02f, 2),
-        (true, 0.40f, 0.04f, 2),
-        (true, 0.40f, 0.08f, 2)
+        //(true, 0.25f, 0.02f, 1),
+        //(true, 0.25f, 0.04f, 1),
+        //(true, 0.25f, 0.08f, 1),
+        //(true, 0.40f, 0.02f, 1),
+        //(true, 0.40f, 0.04f, 1),
+        //(true, 0.40f, 0.08f, 1),
+        //(true, 0.25f, 0.02f, 2),
+        //(true, 0.25f, 0.04f, 2),
+        //(true, 0.25f, 0.08f, 2),
+        //(true, 0.40f, 0.02f, 2),
+        //(true, 0.40f, 0.04f, 2),
+        //(true, 0.40f, 0.08f, 2)
 
     };
 
     private List<Quaternion> pathRotations = new List<Quaternion> { 
         // main axial rotations
+        //Quaternion.Euler(0, 0, 0),
+        //Quaternion.Euler(0, 0, 90),
+        //Quaternion.Euler(0, 0, 180),
+        //Quaternion.Euler(0, 0, 270),
+        //Quaternion.Euler(90, 0, 0),
+        //Quaternion.Euler(270, 0, 0),
+        //Quaternion.Euler(45, 0, 0),
+        //Quaternion.Euler(-45, 0, 0),
+        //Quaternion.Euler(135, 0, 0), // in depth diagonal
+        //Quaternion.Euler(-135, 0, 0),
+        //Quaternion.Euler(0, 0, -45),
+        //Quaternion.Euler(0, 0, 45),
+        //Quaternion.Euler(0, 0, -135),
+        //Quaternion.Euler(0, 0, 135),
+        //Quaternion.Euler(0, 45, 90),
+        //Quaternion.Euler(0, 135, 90),
+        //Quaternion.Euler(0, -45, 90),
+        //Quaternion.Euler(0, -135, 90),
+
         Quaternion.Euler(0, 0, 0),
-        Quaternion.Euler(0, 0, 90),
-        Quaternion.Euler(0, 0, 180),
-        Quaternion.Euler(0, 0, 270),
-        Quaternion.Euler(90, 0, 0),
-        Quaternion.Euler(270, 0, 0),
-        Quaternion.Euler(45, 0, 0),
-        Quaternion.Euler(-45, 0, 0),
-        Quaternion.Euler(135, 0, 0), // in depth diagonal
-        Quaternion.Euler(-135, 0, 0),
-        Quaternion.Euler(0, 0, -45),
-        Quaternion.Euler(0, 0, 45),
-        Quaternion.Euler(0, 0, -135),
-        Quaternion.Euler(0, 0, 135),
-        Quaternion.Euler(0, 45, 90),
-        Quaternion.Euler(0, 135, 90),
-        Quaternion.Euler(0, -45, 90),
-        Quaternion.Euler(0, -135, 90),
+        Quaternion.Euler(0, 0, 90)
     };
 
     // target placement attributes
@@ -132,7 +138,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     private SkinnedMeshRenderer mainHand_skin;
 
 
-    //TBC
+    // check valid trial
     private bool in_valid_zone = false;
 
     // Start is called before the first frame update
@@ -171,6 +177,8 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
             {
                 OnStartTraversing();
             }
+
+            float centeral_displacement = Mathf.Abs(Vector3.Dot(currentTarget.transform.GetChild(0).transform.position - currentTarget_position_init, currentPath.transform.up));
         }
 
         if (isSteering)
@@ -180,6 +188,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
             // Check if movement along the forward vector is greater than 0.2 units
             if (forward_displacement > currentPath.transform.localScale.y * 2 + 0.02f) //*2 since the prefab is already x2 long (see create wire in NextTrial()). 0.005 is because of the ring thickness (=1) and ring plane is considered as the center of it 
             {
+                trial_verification = true;
                 EndTrial();
             }
             else
@@ -271,6 +280,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         //saving tracking information as output for each trial
         SetupSteeringTrackOutput(width, len, rotation, task_type, trialRep,execType);
         //update trial info for saving tracking info in output file
+        trial_verification = false;
         trialL = len;
         trialR = rotation;
         trialW = width;
@@ -398,12 +408,41 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
             
             SaveWireTrack(x, y, z);
 
+            // validating trial
+            float point_dis = Mathf.Sqrt((x * x) + (y * y));
+            if (point_dis > (trialW / 2) + 0.01)
+            {
+                FailTrial();
+            }
+            //debug only
+            //else
+            //{
+            //    stateText.updateText("In!! ");
+            //}
+        
+
         }
         else
         {
              debugText.updateText("no intersection found");
         }                                          
                      
+    }
+
+
+    private void FailTrial()
+    {
+        //stateText.updateText("OUT!!");
+        //remove track file: Done (streamwriter false on creation)
+        //summary file add column
+        // trial number update
+        //reset trial and run it (end trial?) and one back
+        //================================================================
+
+        //update text
+        popupScript.ShowPopup();
+        EndTrial();
+
     }
 
     private void SaveWireTrack(float x, float y, float z) // write tracking information to file: position x, position y, speed
@@ -433,7 +472,6 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         using (StreamWriter writer = new StreamWriter(trackingOutputFile, true))
         {
             writer.WriteLine(newData);
-            //TODO
         }
     }
 
@@ -461,7 +499,16 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         if (currentTarget != null) Destroy(currentTarget);
         if (currentPath != null) Destroy(currentPath);
 
-        currentTrial++;
+        if (trial_verification)
+        {
+            currentTrial++;
+            AudioSource.PlayClipAtPoint(success_sound, Camera.main.transform.position);
+        }
+        else
+        {
+            AudioSource.PlayClipAtPoint(error_sound, Camera.main.transform.position);
+        }
+        
 
         if (isRightHanded)
         {
@@ -471,9 +518,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         {
             leftHandObject.GetComponent<SkinnedMeshRenderer>().material = originalHand_material;
         }
-
-        //play success sound
-        AudioSource.PlayClipAtPoint(success_sound, Camera.main.transform.position);
+        
 
         NextTrial();
 
@@ -606,16 +651,21 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
             UnityEngine.Debug.Log("Directory Not Found!! created new one");
             Directory.CreateDirectory(trackingOutputPath);
         }
-        if (!File.Exists(trackingOutputFile))
+        //if (!File.Exists(trackingOutputFile))
+        //{
+        //    using (StreamWriter writer = new StreamWriter(trackingOutputFile, true))
+        //    {
+        //        writer.WriteLine("PID,taskType,rightHanded,width,length,rotation,execType,trialRep,PositionX,PositionY,PositionZ,Movement,Speed,Timestamp");
+        //    }
+        //}
+        //else
+        //{
+        //    UnityEngine.Debug.Log("WARNING: file already exists, overwritting!");
+        //}
+
+        using (StreamWriter writer = new StreamWriter(trackingOutputFile, false))
         {
-            using (StreamWriter writer = new StreamWriter(trackingOutputFile, true))
-            {
-                writer.WriteLine("PID,taskType,rightHanded,width,length,rotation,execType,trialRep,PositionX,PositionY,PositionZ,Movement,Speed,Timestamp");
-            }
-        }
-        else
-        {
-            UnityEngine.Debug.Log("WARNING: file already exists, overwritting!");
+            writer.WriteLine("PID,taskType,rightHanded,width,length,rotation,execType,trialRep,PositionX,PositionY,PositionZ,Movement,Speed,Timestamp");
         }
     }
 
@@ -633,7 +683,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         {
             using (StreamWriter writer = new StreamWriter(steeringInfoOutputFile, true))
             {
-                writer.WriteLine("PID,isMale,rightHanded,taskType,width,length,rotation,execType,trialRep,totalTime,errorTime,errorNumber");
+                writer.WriteLine("PID,isMale,rightHanded,taskType,width,length,rotation,execType,trialRep,totalTime,errorTime,errorNumber,isValid");
             }
         }
         else
@@ -644,7 +694,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
     private void WriteSteeringInfoData()
     {
-        string newData = $"{participantID},{isMale},{isRightHanded},{trialTask},{trialW},{trialL},{GetPathRotationID(trialR)},{trialExecType},{trialRep},{SteeringTime_trial},{errorTime_trial},{errorNumber_trial}\n";
+        string newData = $"{participantID},{isMale},{isRightHanded},{trialTask},{trialW},{trialL},{GetPathRotationID(trialR)},{trialExecType},{trialRep},{SteeringTime_trial},{errorTime_trial},{errorNumber_trial},{trial_verification}\n";
         using (StreamWriter writer = new StreamWriter(steeringInfoOutputFile, true))
         {
             writer.WriteLine(newData);

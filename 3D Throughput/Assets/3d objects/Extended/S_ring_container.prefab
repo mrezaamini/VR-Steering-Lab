@@ -1316,23 +1316,23 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 771148724304251148, guid: c58839f61a6e87e46bf6f99815048ba7, type: 3}
       propertyPath: _constraints.MaxX.Constrain
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 771148724304251148, guid: c58839f61a6e87e46bf6f99815048ba7, type: 3}
       propertyPath: _constraints.MaxY.Constrain
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 771148724304251148, guid: c58839f61a6e87e46bf6f99815048ba7, type: 3}
       propertyPath: _constraints.MinX.Constrain
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 771148724304251148, guid: c58839f61a6e87e46bf6f99815048ba7, type: 3}
       propertyPath: _constraints.MinY.Constrain
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 771148724304251148, guid: c58839f61a6e87e46bf6f99815048ba7, type: 3}
       propertyPath: _constraints.ConstraintsAreRelative
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1409481329539213260, guid: c58839f61a6e87e46bf6f99815048ba7, type: 3}
       propertyPath: m_LocalPosition.x
