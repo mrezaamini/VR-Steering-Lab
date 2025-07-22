@@ -66,21 +66,21 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     // experiment conditions
     private List<(bool, float, float, int)> exp_conditions = new List<(bool, float, float, int)> // task dificulty (true: ring, false: tunnel), L, W, execution types (0: fast, 1: fast and accurate, 2: accurate)
     {
-        (true, 0.20f, 0.02f, 0),
-        (true, 0.20f, 0.04f, 0),
-        (true, 0.20f, 0.08f, 0),
+        (true, 0.25f, 0.02f, 0),
+        (true, 0.25f, 0.04f, 0),
+        (true, 0.25f, 0.08f, 0),
         (true, 0.40f, 0.02f, 0),
         (true, 0.40f, 0.04f, 0),
         (true, 0.40f, 0.08f, 0),
-        (true, 0.20f, 0.02f, 1),
-        (true, 0.20f, 0.04f, 1),
-        (true, 0.20f, 0.08f, 1),
+        (true, 0.25f, 0.02f, 1),
+        (true, 0.25f, 0.04f, 1),
+        (true, 0.25f, 0.08f, 1),
         (true, 0.40f, 0.02f, 1),
         (true, 0.40f, 0.04f, 1),
         (true, 0.40f, 0.08f, 1),
-        (true, 0.20f, 0.02f, 2),
-        (true, 0.20f, 0.04f, 2),
-        (true, 0.20f, 0.08f, 2),
+        (true, 0.25f, 0.02f, 2),
+        (true, 0.25f, 0.04f, 2),
+        (true, 0.25f, 0.08f, 2),
         (true, 0.40f, 0.02f, 2),
         (true, 0.40f, 0.04f, 2),
         (true, 0.40f, 0.08f, 2)
@@ -95,6 +95,18 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         Quaternion.Euler(0, 0, 270),
         Quaternion.Euler(90, 0, 0),
         Quaternion.Euler(270, 0, 0),
+        Quaternion.Euler(45, 0, 0),
+        Quaternion.Euler(-45, 0, 0),
+        Quaternion.Euler(135, 0, 0), // in depth diagonal
+        Quaternion.Euler(-135, 0, 0),
+        Quaternion.Euler(0, 0, -45),
+        Quaternion.Euler(0, 0, 45),
+        Quaternion.Euler(0, 0, -135),
+        Quaternion.Euler(0, 0, 135),
+        Quaternion.Euler(0, 45, 90),
+        Quaternion.Euler(0, 135, 90),
+        Quaternion.Euler(0, -45, 90),
+        Quaternion.Euler(0, -135, 90),
     };
 
     // target placement attributes
@@ -385,9 +397,6 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
             float z = Vector3.Dot(ringCenter - currentPath.transform.position, wireDirection) + trialL/2; //make it greater than 0
             
             SaveWireTrack(x, y, z);
-
-
-
 
         }
         else
