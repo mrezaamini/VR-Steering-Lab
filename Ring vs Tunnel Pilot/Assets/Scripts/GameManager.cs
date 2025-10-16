@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using System.Diagnostics;
 
 public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STUDY, REMEMBER TO PUT THE UPDATED VERSION BACK INTO THE SOURCE FILE!!!!!!
 {
@@ -13,20 +14,33 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     [Header("Ring and Wire")]
     public GameObject wirePrefab;
     [SerializeField] private List<GameObject> ringPrefabs;
+    [SerializeField] private Material wire_normal_mat;
+    [SerializeField] private Material wire_error_mat;
 
     [Header("Ball and Tunnel")]
-    public GameObject ballPrefab;
-    [SerializeField] private GameObject tunnelPrefab;
+    [SerializeField] private List<GameObject> ballPrefabs;
+    [SerializeField] private List<GameObject> tunnelPrefabs;
+    [SerializeField] private Material tun_normal_mat;
+    [SerializeField] private Material tun_error_mat;
 
     [Header("UI")]
     public AudioClip success_sound;
+    public AudioClip error_sound;
 
 
 
     private Vector3 targetPosition;
     public DebugText debugText;
+
+    // for saving data
     private string trackingOutputFile;
-    
+    private string steeringInfoOutputFile;
+    private double SteeringTime_trial;
+    private double errorTime_trial;
+    private int errorNumber_trial;
+    private Stopwatch steeringSW;
+    private Stopwatch errorSW;
+
     //current task info 
     private float trialW;
     private float trialL;
@@ -66,35 +80,35 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     private List<Quaternion> pathRotations = new List<Quaternion> { 
          // z-plane
         Quaternion.Euler(0, 0, 0),
-        //Quaternion.Euler(0, 0, 45),
-        //Quaternion.Euler(0, 0, 90),
-        //Quaternion.Euler(0, 0, 135),
-        //Quaternion.Euler(0, 0, 180),
-        //Quaternion.Euler(0, 0, 225),
-        //Quaternion.Euler(0, 0, 270),
-        //Quaternion.Euler(0, 0, 315),
+        Quaternion.Euler(0, 0, 45),
+        Quaternion.Euler(0, 0, 90),
+        Quaternion.Euler(0, 0, 135),
+        Quaternion.Euler(0, 0, 180),
+        Quaternion.Euler(0, 0, 225),
+        Quaternion.Euler(0, 0, 270),
+        Quaternion.Euler(0, 0, 315),
         //// x-plane
-        //Quaternion.Euler(45, 0, 0),
-        //Quaternion.Euler(90, 0, 0),
-        //Quaternion.Euler(135, 0, 0),
-        //Quaternion.Euler(225, 0, 0),
-        //Quaternion.Euler(270, 0, 0),
-        //Quaternion.Euler(315, 0, 0),
+        Quaternion.Euler(45, 0, 0),
+        Quaternion.Euler(90, 0, 0),
+        Quaternion.Euler(135, 0, 0),
+        Quaternion.Euler(225, 0, 0),
+        Quaternion.Euler(270, 0, 0),
+        Quaternion.Euler(315, 0, 0),
         //// y-plane
-        //Quaternion.Euler(0, 45, 90),
-        //Quaternion.Euler(0, 135, 90),
-        //Quaternion.Euler(0, 225, 90),
-        //Quaternion.Euler(0, 315, 90),
+        Quaternion.Euler(0, 45, 90),
+        Quaternion.Euler(0, 135, 90),
+        Quaternion.Euler(0, 225, 90),
+        Quaternion.Euler(0, 315, 90),
         //// 3d-diagonal up
-        //Quaternion.Euler(0, 45, 45),
-        //Quaternion.Euler(0, 135, 45),
-        //Quaternion.Euler(0, 225, 45),
-        //Quaternion.Euler(0, 315, 45),
+        Quaternion.Euler(0, 45, 45),
+        Quaternion.Euler(0, 135, 45),
+        Quaternion.Euler(0, 225, 45),
+        Quaternion.Euler(0, 315, 45),
         //// 3d-diagonal down
-        //Quaternion.Euler(0, 45, 135),
-        //Quaternion.Euler(0, 135, 135),
-        //Quaternion.Euler(0, 225, 135),
-        //Quaternion.Euler(0, 315, 135)
+        Quaternion.Euler(0, 45, 135),
+        Quaternion.Euler(0, 135, 135),
+        Quaternion.Euler(0, 225, 135),
+        Quaternion.Euler(0, 315, 135)
     };
 
     // target placement attributes
@@ -118,6 +132,10 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     [SerializeField] private GameObject leftHandObject;
     private SkinnedMeshRenderer mainHand_skin;
 
+
+    //TBC
+    private bool in_valid_zone = false;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -129,13 +147,17 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         }
 
         participantTrials = GenerateParticipantTrial(participantID);
-        Debug.Log("trialCount: " + participantTrials.Count);
-        startExperiment();
+        steeringSW = new Stopwatch();
+        errorSW = new Stopwatch();
+
+        //HOME TEST
+        //startExperiment();
     }
 
     // Update is called once per frame
     void Update()
     {
+        debugText.updateText("stat: "+in_valid_zone+ " "+isSteering);
         if (!calibrationStatus)
         {
             return;
@@ -143,7 +165,8 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
         if (!isSteering & currentTarget != null)
         {
-            float forward_displacement = Mathf.Abs(Vector3.Dot(currentTarget.transform.position - currentTarget_position_init, currentPath.transform.up)); // calculating displacement for starting traverse status
+            
+            float forward_displacement = Mathf.Abs(Vector3.Dot(currentTarget.transform.GetChild(0).transform.position - currentTarget_position_init, currentPath.transform.up)); // calculating displacement for starting traverse status
             // Check if movement along the forward vector is greater than 0.2 units
             if (forward_displacement > 0.025f) //0.2 is the init offset in NextTrial(), and 0.005 for the target thickness/2
             {
@@ -153,7 +176,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
         if (isSteering)
         {
-            float forward_displacement = Mathf.Abs(Vector3.Dot(currentTarget.transform.position - currentTarget_position_init, currentPath.transform.up)); // calculating displacement for ending traverse status
+            float forward_displacement = Mathf.Abs(Vector3.Dot(currentTarget.transform.GetChild(0).transform.position - currentTarget_position_init, currentPath.transform.up));
             // Check if movement along the forward vector is greater than 0.2 units
             if (forward_displacement > currentPath.transform.localScale.y * 2 + 0.005f) //*2 since the prefab is already x2 long (see create wire in NextTrial()). 0.005 is because of the ring thickness (=1) and ring plane is considered as the center of it 
             {
@@ -163,7 +186,6 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
             {
                 OnTraversingTracking();
             }
-            
         }
 
     }
@@ -180,7 +202,11 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         Vector3 cameraForward = mainCamera.transform.forward;
         Vector3 startPos = new Vector3(0f, mainCamera.transform.position.y, mainCamera.transform.position.z);
         scenePosition = startPos + cameraForward * offset_depth;
-        Debug.Log(startPos);
+        //HOME TEST
+        //only for home test ::
+        //scenePosition = new Vector3(1f, 1f, 1f);
+        //////
+        SetupSteeringInfoOutput();
         calibrationStatus = true;
         NextTrial();
     }
@@ -198,7 +224,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
             }
             else
             {
-                Debug.Log("All trials completed for participant.");
+                UnityEngine.Debug.Log("All trials completed for participant.");
                 return;
             }
            
@@ -212,9 +238,6 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         // adjusting center of placements
         targetPosition = new Vector3(scenePosition.x + (mainHand * offset_lateral), scenePosition.y - offset_height, scenePosition.z);
 
-        // update debug text
-        debugText.updateText("length: " + len);
-
         // create path
         if (task_type)
         {
@@ -225,8 +248,8 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         else
         {
             //instantiate tunnel
-            currentPath = Instantiate(tunnelPrefab, targetPosition, rotation);
-            currentPath.transform.localScale = new Vector3(width, len / 2, width); // len/2 because the prefab is already 2 units long
+            currentPath = Instantiate(SelectTunPrefab(width), targetPosition, rotation);
+            currentPath.transform.localScale = new Vector3(width+0.01f, len / 2, width + 0.01f); // len/2 because the prefab is already 2 units long. +0.01f to adjust tunnel width based on the ball thickness
         }
 
         //create target
@@ -241,35 +264,22 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         }
         else
         {
-            currentTarget = Instantiate(ballPrefab, target_instant_position, rotation);
+            currentTarget = Instantiate(SelectBallPrefab(width), target_instant_position, rotation);
         }
         currentTarget.transform.forward = currentPath.transform.up; // to overcome problem regarding orientation of the ring-to be prependicular to wire
 
-        Debug.Log($"Trial {currentTrial + 1} started: P= {mainHand} L = {len}, W = {width}, Rotation = {rotation.eulerAngles}");
-
         //saving tracking information as output for each trial
-        string trackingOutputPath = Path.Combine(Application.dataPath, "CapturedData");
-        string trackingOutputName = $"P{participantID}_T{currentTrial + 1}_wireTrack.csv";
-        trackingOutputFile = Path.Combine(trackingOutputPath, trackingOutputName);
-        if (!Directory.Exists(trackingOutputPath))
-        {
-            Debug.Log("Directory Not Found!! created new one");
-            Directory.CreateDirectory(trackingOutputPath);
-        }
-        if (!File.Exists(trackingOutputFile))
-        {
-            File.WriteAllText(trackingOutputFile, "PID,rightHanded,width,length,rotationX,rotationY,rotationZ,PositionX,PositionY\n");
-        }
-        else
-        {
-            Debug.Log("WARNING: file already exists, overwritting!");
-        }
+        SetupSteeringTrackOutput(width, len, rotation, task_type, trialRep);
         //update trial info for saving tracking info in output file
         trialL = len;
         trialR = rotation;
         trialW = width;
         trialTask = task_type;
-        tryCounter = 0;
+        SteeringTime_trial = 0f;
+        errorNumber_trial = 0;
+        errorTime_trial = 0f;
+        in_valid_zone = false;
+        //tryCounter = 0;
 
         //Rigidbody ring_rb = currentTarget.GetComponent<Rigidbody>();
         //ring_rb.constraints = RigidbodyConstraints.FreezeRotation;
@@ -291,41 +301,67 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
                 selectedRingPrefab = ringPrefabs[2];
                 break;
             default:
-                Debug.LogError("No ring prefab for W: " + W);
+                UnityEngine.Debug.LogError("No ring prefab for W: " + W);
                 break;
         }
 
         return selectedRingPrefab;
     }
 
-
-    private Transform GetWireStartPoint()
+    GameObject SelectBallPrefab(float W)
     {
-        Transform[] children = currentPath.GetComponentsInChildren<Transform>(true);
-        Transform startPoint = null;
+        GameObject selectedBallPrefab = null;
 
-        foreach (Transform child in children)
+        switch (W)
         {
-            if (child.CompareTag("StartPoint"))
-            {
-                startPoint = child;
+            case 0.02f:
+                selectedBallPrefab = ballPrefabs[0];
                 break;
-            }
+            case 0.04f:
+                selectedBallPrefab = ballPrefabs[1];
+                break;
+            case 0.08f:
+                selectedBallPrefab = ballPrefabs[2];
+                break;
+            default:
+                UnityEngine.Debug.LogError("No ball prefab for W: " + W);
+                break;
         }
-        if (startPoint == null)
+
+        return selectedBallPrefab;
+    }
+
+    GameObject SelectTunPrefab(float W)
+    {
+        GameObject selectedTunPrefab = null;
+
+        switch (W)
         {
-            Debug.Log("No child with the specified tag found.");
+            case 0.02f:
+                selectedTunPrefab = tunnelPrefabs[0];
+                break;
+            case 0.04f:
+                selectedTunPrefab = tunnelPrefabs[1];
+                break;
+            case 0.08f:
+                selectedTunPrefab = tunnelPrefabs[2];
+                break;
+            default:
+                UnityEngine.Debug.LogError("No ball prefab for W: " + W);
+                break;
         }
-        return startPoint;
+
+        return selectedTunPrefab;
     }
 
 
     private void OnTraversingTracking()
     {
-        Vector3 ringPlaneNormal = currentTarget.transform.forward;
-        Vector3 ringCenter = currentTarget.transform.position;
+        Vector3 ringPlaneNormal = currentTarget.transform.GetChild(0).transform.forward;
+        Vector3 ringCenter = currentTarget.transform.GetChild(0).transform.position;
+        
+        Vector3 wireRayStartPos = currentTarget_position_init;
 
-        Vector3 wireRayStartPos = GetWireStartPoint().position;
         Ray wireRay = new Ray(wireRayStartPos, currentPath.transform.up);
         Plane ringPlane = new Plane(ringPlaneNormal, ringCenter);
         Vector3 intersectionPoint;
@@ -333,35 +369,51 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         {
             intersectionPoint = wireRay.GetPoint(intr);
             Vector3 localIntersection = intersectionPoint - ringCenter;
-            float x = Vector3.Dot(localIntersection, currentTarget.transform.right);
-            float y = Vector3.Dot(localIntersection, currentTarget.transform.up);
-
-            //debugText.updateText("x: " + x + " / y: " + y);
-            //saving tracking info to file
+            float x = Vector3.Dot(localIntersection, currentTarget.transform.GetChild(0).transform.right);
+            float y = Vector3.Dot(localIntersection, currentTarget.transform.GetChild(0).transform.up);
             SaveWireTrack(x, y);
+            
         }
         else
         {
             //debugText.updateText("no intersection found");
+            UnityEngine.Debug.Log("hehe");
         }
 
     }
 
-    private void SaveWireTrack(float x, float y) // add gender (shoulder breadth) to info trackings
+    private void SaveWireTrack(float x, float y) // write tracking information to file
     {
-        string newData = $"{participantID},{isRightHanded},{trialW},{trialL},{trialR.x},{trialR.y},{trialR.z},{x},{y}\n";
-        File.AppendAllText(trackingOutputFile, newData);
+        string newData = $"{participantID},{trialTask},{isRightHanded},{trialW},{trialL},{GetPathRotationID(trialR)},{trialRep},{x},{y}\n";
+        using (StreamWriter writer = new StreamWriter(trackingOutputFile, true))
+        {
+            writer.WriteLine(newData);
+        }
+    }
+
+    private void OnDestroy()
+    {
+        StreamWriter writer = new StreamWriter(trackingOutputFile, true);
+        writer.Close();
     }
 
     public void EndTrial() // to end a trial and move to the next one
     {
+        //stoping and saving timers
+        steeringSW.Stop();
+        SteeringTime_trial = steeringSW.Elapsed.TotalMilliseconds;
+        steeringSW.Reset();
+
+        errorSW.Stop(); // to make sure it is stopped at the end
+        errorTime_trial += errorSW.Elapsed.TotalMilliseconds;
+        errorSW.Reset();
+
+        WriteSteeringInfoData();
 
         isSteering = false;
         // destroy previous trial objects
         if (currentTarget != null) Destroy(currentTarget);
         if (currentPath != null) Destroy(currentPath);
-
-        Debug.Log("OBJ deleted");
 
         currentTrial++;
 
@@ -383,7 +435,6 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
     public void OnStartTraversing()
     {
-        Debug.Log("traversing started");
 
         isSteering = true;
         if (isRightHanded)
@@ -394,6 +445,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         {
             leftHandObject.GetComponent<SkinnedMeshRenderer>().material = invisibleHand_material;
         }
+        steeringSW.Restart();
 
     }
 
@@ -407,7 +459,8 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         for (int i = CB_start; i < exp_conditions.Count; i++)
         {
             Vector2 index_diff = new Vector2(exp_conditions[i].Item2, exp_conditions[i].Item3);
-            List<Quaternion> shuffled_rotations = ShuffleRotations(pathRotations);
+            //List<Quaternion> shuffled_rotations = ShuffleRotations(pathRotations);
+            List<Quaternion> shuffled_rotations = pathRotations;
             foreach (Quaternion rotation in shuffled_rotations)
             {
                 trials.Add((exp_conditions[i].Item1, index_diff, rotation));
@@ -438,6 +491,147 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
             (shuffledRot[i], shuffledRot[randIndex]) = (shuffledRot[randIndex], shuffledRot[i]);
         }
         return shuffledRot;
+    }
+
+    public void OnHitBoundaries()
+    {
+        if (isSteering)
+        {
+            errorNumber_trial++;
+            AudioSource.PlayClipAtPoint(error_sound, Camera.main.transform.position);
+            OnHitVisualFeedback(trialTask);
+            errorSW.Restart();
+        }
+        in_valid_zone = false;
+    }
+
+    public void OnCorrectHit()
+    {
+        in_valid_zone = true;
+        if (isSteering)
+        {
+            errorSW.Stop();
+            errorTime_trial += errorSW.Elapsed.TotalMilliseconds;
+            errorSW.Reset();
+            OnCorrectVisualFeedback(trialTask);
+        }
+    }
+
+    // to find the rotation ID (rot<index in list of rotations) for data naming
+    private string GetPathRotationID(Quaternion trial_rot)
+    {
+        string rotationString = "UnknownRot";
+        for (int i = 0; i < pathRotations.Count; i++)
+        {
+            if (Quaternion.Angle(trial_rot, pathRotations[i]) < 1f) // Allow small floating-point differences
+            {
+                rotationString = $"Rot{i}";
+                break;
+            }
+        }
+        return rotationString;
+    }
+
+    private void SetupSteeringTrackOutput(float trial_w, float trial_l, Quaternion trial_rot, bool trial_task_type, int trial_repetition)
+    {
+        // Find condition ID
+        int conditionIndex = exp_conditions.IndexOf((trial_task_type, trial_l, trial_w));
+        if (conditionIndex == -1)
+        {
+            UnityEngine.Debug.LogError("Invalid trial conditions provided.");
+            return;
+        }
+        string conditionString = $"C{conditionIndex}";
+
+        // Find rotation ID
+        string rotationString = GetPathRotationID(trial_rot);
+
+        // Assign repetition string
+        string repetitionString = $"Rep{trial_repetition}";
+
+        // Construct and return the file identifier
+        string trackingOutputPath = Path.Combine(Application.dataPath, "CapturedData");
+        string trackingOutputName = $"{participantID}_{conditionString}_{rotationString}_{repetitionString}_Track.csv";
+        trackingOutputFile = Path.Combine(trackingOutputPath, trackingOutputName);
+        if (!Directory.Exists(trackingOutputPath))
+        {
+            UnityEngine.Debug.Log("Directory Not Found!! created new one");
+            Directory.CreateDirectory(trackingOutputPath);
+        }
+        if (!File.Exists(trackingOutputFile))
+        {
+            using (StreamWriter writer = new StreamWriter(trackingOutputFile, true))
+            {
+                writer.WriteLine("PID,taskType,rightHanded,width,length,rotation,trialRep,PositionX,PositionY");
+            }
+        }
+        else
+        {
+            UnityEngine.Debug.Log("WARNING: file already exists, overwritting!");
+        }
+    }
+
+    private void SetupSteeringInfoOutput()
+    {
+        string trackingOutputPath = Path.Combine(Application.dataPath, "CapturedData");
+        string trackingOutputName = $"{participantID}_summary.csv";
+        steeringInfoOutputFile = Path.Combine(trackingOutputPath, trackingOutputName);
+        if (!Directory.Exists(trackingOutputPath))
+        {
+            UnityEngine.Debug.Log("Directory Not Found!! created new one");
+            Directory.CreateDirectory(trackingOutputPath);
+        }
+        if (!File.Exists(steeringInfoOutputFile))
+        {
+            using (StreamWriter writer = new StreamWriter(steeringInfoOutputFile, true))
+            {
+                writer.WriteLine("PID,isMale,rightHanded,taskType,width,length,rotation,trialRep,totalTime,errorTime,errorNumber");
+            }
+        }
+        else
+        {
+            UnityEngine.Debug.Log("WARNING: file already exists, overwritting!");
+        }
+    }
+
+    private void WriteSteeringInfoData()
+    {
+        //should be managed: totalTime, errorTime, errorNumber
+        string newData = $"{participantID},{isMale},{isRightHanded},{trialTask},{trialW},{trialL},{GetPathRotationID(trialR)},{trialRep},{SteeringTime_trial},{errorTime_trial},{errorNumber_trial}\n";
+        using (StreamWriter writer = new StreamWriter(steeringInfoOutputFile, true))
+        {
+            writer.WriteLine(newData);
+        }
+    }
+
+    private void OnHitVisualFeedback(bool path_type) // path type true for wire, false for tunnel
+    {
+        Renderer path_renderer = currentPath.GetComponent<Renderer>();
+        if (path_type)
+        {
+            // change color of the wire to red
+            path_renderer.material = wire_error_mat;
+        }
+        else
+        {
+            // change color of the tunnel to red
+            path_renderer.material = tun_error_mat;
+        }
+    }
+
+    private void OnCorrectVisualFeedback(bool path_type) // path type true for wire, false for tunnel
+    {
+        Renderer path_renderer = currentPath.GetComponent<Renderer>();
+        if (path_type)
+        {
+            // change color of the wire to normal
+            path_renderer.material = wire_normal_mat;
+        }
+        else
+        {
+            // change color of the tunnel to normal
+            path_renderer.material = tun_normal_mat;
+        }
     }
 
 }
