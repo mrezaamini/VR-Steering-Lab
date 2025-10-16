@@ -1,0 +1,15 @@
+PID,isMale,rightHanded,taskType,width,length,rotation,execType,trialRep,totalTime,errorTime,errorNumber
+0,False,False,True,0.02,0.2,Rot2,0,0,11932.0401,7645.7849,2
+
+0,False,False,True,0.02,0.2,Rot3,0,0,25366.5854,24281.7415,2
+
+0,False,False,True,0.02,0.2,Rot2,0,0,29579.911,28109.0531,4
+
+0,False,False,True,0.02,0.2,Rot0,0,0,33301.3902,32199.9536,1
+
+0,False,False,True,0.02,0.2,Rot5,0,0,19389.3113,18247.4614,2
+
+0,False,False,True,0.02,0.2,Rot1,0,0,29650.036,29157.0295,3
+
+0,False,False,True,0.02,0.2,Rot4,0,0,13179.2733,12339.8087,2
+
