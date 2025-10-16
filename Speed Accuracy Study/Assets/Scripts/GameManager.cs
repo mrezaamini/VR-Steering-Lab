@@ -391,6 +391,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         {
             writer.WriteLine(newData);
         }
+        debugText.updateText("X: " + x + " Y: " + y);
     }
 
     private void OnDestroy()

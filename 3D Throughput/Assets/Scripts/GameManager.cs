@@ -24,8 +24,8 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     [SerializeField] private Material tun_error_mat;
 
     [Header("UI")]
-    public AudioClip success_sound;
-    public AudioClip error_sound;
+    public AudioSource success_sound;
+    public AudioSource error_sound;
 
 
 
@@ -69,50 +69,47 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     // experiment conditions
     private List<(bool, float, float, int)> exp_conditions = new List<(bool, float, float, int)> // task dificulty (true: ring, false: tunnel), L, W, execution types (0: fast, 1: fast and accurate, 2: accurate)
     {
-        //(true, 0.25f, 0.02f, 0),
-        //(true, 0.25f, 0.04f, 0),
+        (true, 0.25f, 0.02f, 0),
+        (true, 0.25f, 0.04f, 0),
         (true, 0.25f, 0.08f, 0),
-        //(true, 0.40f, 0.02f, 0),
-        //(true, 0.40f, 0.04f, 0),
+        (true, 0.40f, 0.02f, 0),
+        (true, 0.40f, 0.04f, 0),
         (true, 0.40f, 0.08f, 0),
-        //(true, 0.25f, 0.02f, 1),
-        //(true, 0.25f, 0.04f, 1),
-        //(true, 0.25f, 0.08f, 1),
-        //(true, 0.40f, 0.02f, 1),
-        //(true, 0.40f, 0.04f, 1),
-        //(true, 0.40f, 0.08f, 1),
-        //(true, 0.25f, 0.02f, 2),
-        //(true, 0.25f, 0.04f, 2),
-        //(true, 0.25f, 0.08f, 2),
-        //(true, 0.40f, 0.02f, 2),
-        //(true, 0.40f, 0.04f, 2),
-        //(true, 0.40f, 0.08f, 2)
+        (true, 0.25f, 0.02f, 1),
+        (true, 0.25f, 0.04f, 1),
+        (true, 0.25f, 0.08f, 1),
+        (true, 0.40f, 0.02f, 1),
+        (true, 0.40f, 0.04f, 1),
+        (true, 0.40f, 0.08f, 1),
+        (true, 0.25f, 0.02f, 2),
+        (true, 0.25f, 0.04f, 2),
+        (true, 0.25f, 0.08f, 2),
+        (true, 0.40f, 0.02f, 2),
+        (true, 0.40f, 0.04f, 2),
+        (true, 0.40f, 0.08f, 2)
 
     };
 
     private List<Quaternion> pathRotations = new List<Quaternion> { 
         // main axial rotations
-        //Quaternion.Euler(0, 0, 0),
-        //Quaternion.Euler(0, 0, 90),
-        //Quaternion.Euler(0, 0, 180),
-        //Quaternion.Euler(0, 0, 270),
-        //Quaternion.Euler(90, 0, 0),
-        //Quaternion.Euler(270, 0, 0),
-        //Quaternion.Euler(45, 0, 0),
-        //Quaternion.Euler(-45, 0, 0),
-        //Quaternion.Euler(135, 0, 0), // in depth diagonal
-        //Quaternion.Euler(-135, 0, 0),
-        //Quaternion.Euler(0, 0, -45),
-        //Quaternion.Euler(0, 0, 45),
-        //Quaternion.Euler(0, 0, -135),
-        //Quaternion.Euler(0, 0, 135),
-        //Quaternion.Euler(0, 45, 90),
-        //Quaternion.Euler(0, 135, 90),
-        //Quaternion.Euler(0, -45, 90),
-        //Quaternion.Euler(0, -135, 90),
-
         Quaternion.Euler(0, 0, 0),
-        Quaternion.Euler(0, 0, 90)
+        Quaternion.Euler(0, 0, 90),
+        Quaternion.Euler(0, 0, 180),
+        Quaternion.Euler(0, 0, 270),
+        Quaternion.Euler(90, 0, 0),
+        Quaternion.Euler(270, 0, 0),
+        Quaternion.Euler(45, 0, 0),
+        Quaternion.Euler(-45, 0, 0),
+        Quaternion.Euler(135, 0, 0), // in depth diagonal
+        Quaternion.Euler(-135, 0, 0),
+        Quaternion.Euler(0, 0, -45),
+        Quaternion.Euler(0, 0, 45),
+        Quaternion.Euler(0, 0, -135),
+        Quaternion.Euler(0, 0, 135),
+        Quaternion.Euler(0, 45, 90),
+        Quaternion.Euler(0, 135, 90),
+        Quaternion.Euler(0, -45, 90),
+        Quaternion.Euler(0, -135, 90)
     };
 
     // target placement attributes
@@ -424,7 +421,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         }
         else
         {
-             debugText.updateText("no intersection found");
+             //debugText.updateText("no intersection found");
         }                                          
                      
     }
@@ -473,6 +470,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         {
             writer.WriteLine(newData);
         }
+        //debugText.updateText("X: "+x+" Y: "+y);
     }
 
     private void OnDestroy()
@@ -502,11 +500,11 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         if (trial_verification)
         {
             currentTrial++;
-            AudioSource.PlayClipAtPoint(success_sound, Camera.main.transform.position);
+            success_sound.Play();
         }
         else
         {
-            AudioSource.PlayClipAtPoint(error_sound, Camera.main.transform.position);
+            error_sound.Play();
         }
         
 
@@ -591,7 +589,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         if (isSteering)
         {
             errorNumber_trial++;
-            AudioSource.PlayClipAtPoint(error_sound, Camera.main.transform.position);
+            error_sound.Play();
             OnHitVisualFeedback(trialTask);
             errorSW.Restart();
         }
