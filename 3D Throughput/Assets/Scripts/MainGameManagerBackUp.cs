@@ -3,9 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using System.Diagnostics;
-using System.Linq;
 
-public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STUDY, REMEMBER TO PUT THE UPDATED VERSION BACK INTO THE SOURCE FILE!!!!!!
+public class MainGameManagerBackUp : MonoBehaviour // COPY PASTE THIS FILE TO THE GAME MANAGER SCRIPT FOR MAIN PROCEDURE OF THE 3D THP EXPERIMENT
 {
     [Header("Participant Info")]
     public int participantID; // starts from 0
@@ -48,7 +47,6 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     private bool trial_verification = false;
     private float trialW;
     private float trialL;
-    private bool trialF;
     private Quaternion trialR;
     private bool trialTask; // true is ring and wire, false is ball and tunnel
     private int tryCounter; // tries until successful steering. starts from 0
@@ -69,24 +67,27 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
 
     // experiment conditions
-    private List<(float, float)> exp_IDs = new List<(float, float)> // task dificulty: L, W
-    { 
-        (0.25f, 0.02f),
-        (0.25f, 0.04f),
-        (0.25f, 0.08f),
-        (0.40f, 0.02f),
-        (0.40f, 0.04f),
-        (0.40f, 0.08f)
-    };
-
-    private List<(bool, int, bool)> exp_conditions = new List<(bool, int, bool)> // task dificulty (true: ring, false: tunnel), execution types (0: fast, 1: fast and accurate, 2: accurate), FeedbackType (auditory feedback true/false)
+    private List<(bool, float, float, int)> exp_conditions = new List<(bool, float, float, int)> // task dificulty (true: ring, false: tunnel), L, W, execution types (0: fast, 1: fast and accurate, 2: accurate)
     {
-        (true, 0, true),
-        (true, 1, true),
-        (true, 2, true),
-        (true, 0, false),
-        (true, 1, false),
-        (true, 2, false)
+        (true, 0.25f, 0.02f, 0),
+        (true, 0.25f, 0.04f, 0),
+        (true, 0.25f, 0.08f, 0),
+        (true, 0.40f, 0.02f, 0),
+        (true, 0.40f, 0.04f, 0),
+        (true, 0.40f, 0.08f, 0),
+        (true, 0.25f, 0.02f, 1),
+        (true, 0.25f, 0.04f, 1),
+        (true, 0.25f, 0.08f, 1),
+        (true, 0.40f, 0.02f, 1),
+        (true, 0.40f, 0.04f, 1),
+        (true, 0.40f, 0.08f, 1),
+        (true, 0.25f, 0.02f, 2),
+        (true, 0.25f, 0.04f, 2),
+        (true, 0.25f, 0.08f, 2),
+        (true, 0.40f, 0.02f, 2),
+        (true, 0.40f, 0.04f, 2),
+        (true, 0.40f, 0.08f, 2)
+
     };
 
     private List<Quaternion> pathRotations = new List<Quaternion> { 
@@ -97,18 +98,18 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         Quaternion.Euler(0, 0, 270),
         Quaternion.Euler(90, 0, 0),
         Quaternion.Euler(270, 0, 0),
-        //Quaternion.Euler(45, 0, 0),
-        //Quaternion.Euler(-45, 0, 0),
-        //Quaternion.Euler(135, 0, 0), // in depth diagonal
-        //Quaternion.Euler(-135, 0, 0),
-        //Quaternion.Euler(0, 0, -45),
-        //Quaternion.Euler(0, 0, 45),
-        //Quaternion.Euler(0, 0, -135),
-        //Quaternion.Euler(0, 0, 135),
-        //Quaternion.Euler(0, 45, 90),
-        //Quaternion.Euler(0, 135, 90),
-        //Quaternion.Euler(0, -45, 90),
-        //Quaternion.Euler(0, -135, 90)
+        Quaternion.Euler(45, 0, 0),
+        Quaternion.Euler(-45, 0, 0),
+        Quaternion.Euler(135, 0, 0), // in depth diagonal
+        Quaternion.Euler(-135, 0, 0),
+        Quaternion.Euler(0, 0, -45),
+        Quaternion.Euler(0, 0, 45),
+        Quaternion.Euler(0, 0, -135),
+        Quaternion.Euler(0, 0, 135),
+        Quaternion.Euler(0, 45, 90),
+        Quaternion.Euler(0, 135, 90),
+        Quaternion.Euler(0, -45, 90),
+        Quaternion.Euler(0, -135, 90)
     };
 
     // target placement attributes
@@ -122,10 +123,9 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     private GameObject mainCamera;
     private bool calibrationStatus = false; //should be false at start
     public GameObject startButton;
-    private bool play_audio;
 
 
-    private List<(bool, Vector2, Quaternion, int, bool)> participantTrials; // task type (true: ring, false: tunnel), ID, rotation, task execution type, feedback type
+    private List<(bool, Vector2, Quaternion, int)> participantTrials; // task type (true: ring, false: tunnel), ID, rotation, task execution type
 
     //hand materials
     [SerializeField] private Material invisibleHand_material;
@@ -237,7 +237,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         }
 
         //Decompose trial condition
-        (bool task_type, Vector2 id, Quaternion rotation, int execType, bool feedback) = participantTrials[currentTrial];
+        (bool task_type, Vector2 id, Quaternion rotation, int execType) = participantTrials[currentTrial];
         float len = id.x;
         float width = id.y;
 
@@ -272,19 +272,15 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         {
             currentTarget = Instantiate(SelectBallPrefab(width), target_instant_position, rotation);
         }
-        currentTarget.transform.forward = currentPath.transform.up; // to overcome problem regarding orientation of the ring-to be prependicular to wire\
-
-        //TODO: make changes to the feedback type
-        play_audio = feedback;
+        currentTarget.transform.forward = currentPath.transform.up; // to overcome problem regarding orientation of the ring-to be prependicular to wire
 
         //saving tracking information as output for each trial
-        SetupSteeringTrackOutput(width, len, rotation, task_type, trialRep,execType,feedback);
+        SetupSteeringTrackOutput(width, len, rotation, task_type, trialRep,execType);
         //update trial info for saving tracking info in output file
         trial_verification = false;
         trialL = len;
         trialR = rotation;
         trialW = width;
-        trialF = feedback;
         trialTask = task_type;
         SteeringTime_trial = 0f;
         errorNumber_trial = 0;
@@ -295,27 +291,16 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         previous_track = null;
         previous_time = null;
 
-        //showing condition to user
-        int conditionIndex = exp_conditions.IndexOf((trialTask, trialExecType, trialF));
-        switch (conditionIndex)
+        switch (trialExecType)
         {
             case 0:
-                debugText.updateText("Fast (Audio)");
+                debugText.updateText("Fast");
                 break;
             case 1:
-                debugText.updateText("Fast & Accurate (Audio)");
+                debugText.updateText("Fast & Accurate");
                 break;
             case 2:
-                debugText.updateText("Accurate (Audio)");
-                break;
-            case 3:
-                debugText.updateText("Fast (No Audio)");
-                break;
-            case 4:
-                debugText.updateText("Fast & Accurate (No Audio)");
-                break;
-            case 5:
-                debugText.updateText("Accurate (No Audio)");
+                debugText.updateText("Accurate");
                 break;
             default:
                 debugText.updateText("Unknown Execution Type");
@@ -477,7 +462,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         }
         previous_time = input_time;
         
-        string newData = $"{participantID},{trialTask},{isRightHanded},{trialW},{trialL},{trialF},{GetPathRotationID(trialR)},{trialExecType},{trialRep},{x},{y},{z},{movement_vector.magnitude},{movement_speed},{input_time}\n";
+        string newData = $"{participantID},{trialTask},{isRightHanded},{trialW},{trialL},{GetPathRotationID(trialR)},{trialExecType},{trialRep},{x},{y},{z},{movement_vector.magnitude},{movement_speed},{input_time}\n";
 
         
 
@@ -519,8 +504,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         }
         else
         {
-            if(play_audio)
-                error_sound.Play();
+            error_sound.Play();
         }
         
 
@@ -555,38 +539,36 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     }
 
 
-    public List<(bool, Vector2, Quaternion, int, bool)> GenerateParticipantTrial(int PID)
+    public List<(bool, Vector2, Quaternion, int)> GenerateParticipantTrial(int PID) //udpated for new conditions, i.e., task execution type
     {
-        List<(bool, Vector2, Quaternion, int, bool)> trials = new List<(bool, Vector2, Quaternion, int, bool)>();
+        int CB_start = PID % 3; // counter balancing execution strategies
 
-        // Counterbalance exp_conditions (rotate list based on participant ID)
-        List<(bool, int, bool)> balancedConditions = exp_conditions
-            .Skip(PID % exp_conditions.Count)
-            .Concat(exp_conditions.Take(PID % exp_conditions.Count))
-            .ToList();
+        List<(bool, Vector2, Quaternion, int)> trials = new List<(bool, Vector2, Quaternion, int)>(); // list of IDs and Rotations
 
-        // Shuffle IDs and Rotations (random seed = PID for reproducibility)
-        System.Random rng = new System.Random(PID);
-        List<(float, float)> shuffledIDs = exp_IDs.OrderBy(_ => rng.Next()).ToList();
-        List<Quaternion> shuffledRotations = pathRotations.OrderBy(_ => rng.Next()).ToList();
-
-        // Generate all combinations (block structure: conditions are grouped)
-        foreach (var cond in balancedConditions)
+        for (int i = CB_start*6; i < exp_conditions.Count; i++)
         {
-            bool taskType = cond.Item1;
-            int execType = cond.Item2;
-            bool feedback = cond.Item3;
-
-            foreach (var id in shuffledIDs)
+            Vector2 index_diff = new Vector2(exp_conditions[i].Item2, exp_conditions[i].Item3);
+            List<Quaternion> shuffled_rotations = ShuffleRotations(pathRotations);
+            //List<Quaternion> shuffled_rotations = pathRotations;
+            int execType = exp_conditions[i].Item4;
+            foreach (Quaternion rotation in shuffled_rotations)
             {
-                Vector2 difficulty = new Vector2(id.Item1, id.Item2);
-
-                foreach (var rot in shuffledRotations)
-                {
-                    trials.Add((taskType, difficulty, rot, execType, feedback));
-                }
+                trials.Add((exp_conditions[i].Item1, index_diff, rotation, execType));
             }
         }
+        for (int i = 0; i < CB_start*6; i++)
+        {
+            Vector2 index_diff = new Vector2(exp_conditions[i].Item2, exp_conditions[i].Item3);
+            List<Quaternion> shuffled_rotations = ShuffleRotations(pathRotations);
+            int execType = exp_conditions[i].Item4;
+            foreach (Quaternion rotation in shuffled_rotations)
+            {
+                trials.Add((exp_conditions[i].Item1, index_diff, rotation,execType));
+            }
+        }
+
+        trialRep = 0; // to indicate the repetition number
+        currentTrial = 0; // starting point for trials list
 
         return trials;
     }
@@ -607,8 +589,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         if (isSteering)
         {
             errorNumber_trial++;
-            if(play_audio)
-                error_sound.Play();
+            error_sound.Play();
             OnHitVisualFeedback(trialTask);
             errorSW.Restart();
         }
@@ -642,21 +623,10 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         return rotationString;
     }
 
-    private string GetPathIDvalue (float trial_w, float trial_l)
-    {
-        string IDstring = "unknownID";
-        int ID_index = exp_IDs.FindIndex(id => Mathf.Approximately(id.Item1, trial_l) && Mathf.Approximately(id.Item2, trial_w));
-        if(ID_index != -1)
-        {
-            IDstring = $"ID{ID_index}";
-        }
-        return IDstring;
-    }
-
-    private void SetupSteeringTrackOutput(float trial_w, float trial_l, Quaternion trial_rot, bool trial_task_type, int trial_repetition, int trial_exec, bool trial_feedback)
+    private void SetupSteeringTrackOutput(float trial_w, float trial_l, Quaternion trial_rot, bool trial_task_type, int trial_repetition, int trial_exec)
     {
         // Find condition ID
-        int conditionIndex = exp_conditions.IndexOf((trial_task_type, trial_exec,trial_feedback));
+        int conditionIndex = exp_conditions.IndexOf((trial_task_type, trial_l, trial_w, trial_exec));
         if (conditionIndex == -1)
         {
             UnityEngine.Debug.LogError("Invalid trial conditions provided.");
@@ -667,15 +637,12 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         // Find rotation ID
         string rotationString = GetPathRotationID(trial_rot);
 
-        // Find ID
-        string taskIDvalue = GetPathIDvalue(trial_w, trial_l);
-
         // Assign repetition string
         string repetitionString = $"Rep{trial_repetition}";
 
         // Construct and return the file identifier
         string trackingOutputPath = Path.Combine(Application.dataPath, "CapturedData");
-        string trackingOutputName = $"{participantID}_{conditionString}_{taskIDvalue}_{rotationString}_{repetitionString}_Track.csv";
+        string trackingOutputName = $"{participantID}_{conditionString}_{rotationString}_{repetitionString}_Track.csv";
         trackingOutputFile = Path.Combine(trackingOutputPath, trackingOutputName);
         if (!Directory.Exists(trackingOutputPath))
         {
@@ -696,7 +663,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
         using (StreamWriter writer = new StreamWriter(trackingOutputFile, false))
         {
-            writer.WriteLine("PID,taskType,rightHanded,width,length,feedback,rotation,execType,trialRep,PositionX,PositionY,PositionZ,Movement,Speed,Timestamp");
+            writer.WriteLine("PID,taskType,rightHanded,width,length,rotation,execType,trialRep,PositionX,PositionY,PositionZ,Movement,Speed,Timestamp");
         }
     }
 
@@ -714,7 +681,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         {
             using (StreamWriter writer = new StreamWriter(steeringInfoOutputFile, true))
             {
-                writer.WriteLine("PID,isMale,rightHanded,taskType,width,length,feedback,rotation,execType,trialRep,totalTime,errorTime,errorNumber,isValid");
+                writer.WriteLine("PID,isMale,rightHanded,taskType,width,length,rotation,execType,trialRep,totalTime,errorTime,errorNumber,isValid");
             }
         }
         else
@@ -725,7 +692,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
     private void WriteSteeringInfoData()
     {
-        string newData = $"{participantID},{isMale},{isRightHanded},{trialTask},{trialW},{trialL},{trialF},{GetPathRotationID(trialR)},{trialExecType},{trialRep},{SteeringTime_trial},{errorTime_trial},{errorNumber_trial},{trial_verification}\n";
+        string newData = $"{participantID},{isMale},{isRightHanded},{trialTask},{trialW},{trialL},{GetPathRotationID(trialR)},{trialExecType},{trialRep},{SteeringTime_trial},{errorTime_trial},{errorNumber_trial},{trial_verification}\n";
         using (StreamWriter writer = new StreamWriter(steeringInfoOutputFile, true))
         {
             writer.WriteLine(newData);

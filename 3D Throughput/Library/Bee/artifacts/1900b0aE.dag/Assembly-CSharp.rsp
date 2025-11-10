@@ -450,6 +450,7 @@
 "Assets/Scripts/GameManager.cs"
 "Assets/Scripts/HitHandler.cs"
 "Assets/Scripts/length pilot/LengthPilotManager.cs"
+"Assets/Scripts/MainGameManagerBackUp.cs"
 "Assets/Scripts/placement pilot/PilotPlaceManager.cs"
 "Assets/Scripts/SteeringStatus.cs"
 "Assets/Scripts/TunnelHitHandler.cs"
