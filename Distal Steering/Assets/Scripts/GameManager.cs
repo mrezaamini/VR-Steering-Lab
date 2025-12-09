@@ -20,8 +20,8 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
     [Header("Scene")]
     public Camera mainCamera;
-    public float referenceDepth = 5f; // base depth for condition
-    public Vector2 baseSize = new Vector2(1f, 1f); // base width/length at base depth
+    public GameObject Linear_Path;
+    public VisualSizeHandler LP_VShandler;
 
     //data tracking
     private string trackingOutputFile;
@@ -33,6 +33,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     private Stopwatch errorSW;
 
     //current trial info
+    private GameObject trial_path;
     private bool trial_verification = false;
     private float trialW;
     private float trialL;
@@ -48,6 +49,13 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
     //Experiment conditions
     //TODO
+    public float BASE_DEPTH = 1f;
+    private List<(int, Vector3)> participantTrials;
+    List<Vector3> path_geometries = new List<Vector3>() // W L D (base depth)
+    {
+        new Vector3(0.05f,0.3f,3f),
+        new Vector3(0.05f,0.3f,5f)
+    };
 
 
     void Start()
@@ -55,8 +63,14 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         //placement start, end, path and scaling
         if (!mainCamera) mainCamera = Camera.main; //make sure camera is attached
 
+        participantTrials = GenerateParticipantTrial(participantID);
+
+        LP_VShandler.referenceDistance = BASE_DEPTH;
+
         steeringSW = new Stopwatch();
         errorSW = new Stopwatch();
+
+        NextTrial();
 
     }
 
@@ -79,6 +93,64 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         }
     }
 
+
+    public void NextTrial()
+    {
+        if(currentTrial >= participantTrials.Count)
+        {
+            if (trialRep < 2) // 3 Rep per participant
+            {
+                trialRep++;
+                currentTrial = 0;
+            }
+            else
+            {
+                UnityEngine.Debug.Log("All trials completed for participant.");
+                return;
+            }
+        }
+
+        (int path_type, Vector3 path_geo) = participantTrials[currentTrial];
+        float base_width = path_geo.x;
+        float base_len = path_geo.y;
+        float desired_depth = path_geo.z;
+
+        switch (path_type)
+        {
+            case 1:
+                LP_VShandler.baseSize.x = base_len;
+                LP_VShandler.baseSize.y = base_width;
+                LP_VShandler.desiredDistance = desired_depth;
+                trial_path = Linear_Path;
+                break;
+            default: UnityEngine.Debug.Log("Invalid Path Type!"); break;
+        }
+
+        trial_path.SetActive(true);
+
+        //TODO: setup steering track output
+
+        //update trial info:
+        trial_verification = false;
+        trialL = base_len;
+        trialW = base_width;
+        trialD = desired_depth;
+    }
+
+
+
+    public List<(int, Vector3)> GenerateParticipantTrial(int PID)
+    {
+        List<(int, Vector3)> trials = new List<(int, Vector3)>();
+        foreach (var v in path_geometries)
+        {
+            trials.Add((1, v));
+        }
+
+        return trials;
+    }
+
+    //Rest from before
     private void OnSteeringTracking()
     {
         //get hit point relative x and y
@@ -127,27 +199,12 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     }
 
 
-    public void EndTrial() // to end a trial and move to the next one
+    public void EndTrial(bool trial_veri) // to end a trial and move to the next one
     {
-        //stoping and saving timers
-        steeringSW.Stop();
-        SteeringTime_trial = steeringSW.Elapsed.TotalMilliseconds;
-        steeringSW.Reset();
-
-        errorSW.Stop(); // to make sure it is stopped at the end
-        errorTime_trial += errorSW.Elapsed.TotalMilliseconds;
-        errorSW.Reset();
-
-        WriteSteeringInfoData();
-
-        isSteering = false;
-        //  TODO: destroy previous trial objects
-        //if (currentTarget != null) Destroy(currentTarget);
-        //if (currentPath != null) Destroy(currentPath);
-
-        if (trial_verification)
+        if (trial_veri)
         {
             currentTrial++;
+            trial_verification = true;
             success_sound.Play();
         }
         else
@@ -155,8 +212,27 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
             error_sound.Play();
         }
 
-        //TODO: next trial:
-        //NextTrial();
+        trial_path.SetActive(false);
+
+
+        //stoping and saving timers
+        //steeringSW.Stop();
+        //SteeringTime_trial = steeringSW.Elapsed.TotalMilliseconds;
+        //steeringSW.Reset();
+
+        //errorSW.Stop(); // to make sure it is stopped at the end
+        //errorTime_trial += errorSW.Elapsed.TotalMilliseconds;
+        //errorSW.Reset();
+
+        //WriteSteeringInfoData();
+
+        isSteering = false;
+        //  TODO: destroy previous trial objects
+        //if (currentTarget != null) Destroy(currentTarget);
+        //if (currentPath != null) Destroy(currentPath);
+
+        
+        NextTrial();
 
     }
 

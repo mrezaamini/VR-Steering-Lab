@@ -18,6 +18,12 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     [SerializeField] private Material wire_normal_mat;
     [SerializeField] private Material wire_error_mat;
 
+    [Header("Ring and Wire (collider)")]
+    //public GameObject wirePrefab;
+    [SerializeField] private List<GameObject> C_ringPrefabs;
+    //[SerializeField] private Material wire_normal_mat;
+    //[SerializeField] private Material wire_error_mat;
+
     [Header("Ball and Tunnel")]
     [SerializeField] private List<GameObject> ballPrefabs;
     [SerializeField] private List<GameObject> tunnelPrefabs;
@@ -79,35 +85,35 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         (0.40f, 0.08f)
     };
 
-    private List<(bool, int, bool)> exp_conditions = new List<(bool, int, bool)> // task dificulty (true: ring, false: tunnel), execution types (0: fast, 1: fast and accurate, 2: accurate), FeedbackType (auditory feedback true/false)
+    private List<(bool, int, bool)> exp_conditions = new List<(bool, int, bool)> // task dificulty (true: ring, false: tunnel), execution types (0: fast, 1: fast and accurate, 2: accurate), ColliderStatus (true/false)
     {
-        (true, 0, true),
+        //(true, 0, true),
         (true, 1, true),
-        (true, 2, true),
-        (true, 0, false),
+        //(true, 2, true),
+        //(true, 0, false),
         (true, 1, false),
-        (true, 2, false)
+        //(true, 2, false)
     };
 
     private List<Quaternion> pathRotations = new List<Quaternion> { 
         // main axial rotations
-        Quaternion.Euler(0, 0, 0),
-        Quaternion.Euler(0, 0, 90),
-        Quaternion.Euler(0, 0, 180),
-        Quaternion.Euler(0, 0, 270),
-        Quaternion.Euler(90, 0, 0),
-        Quaternion.Euler(270, 0, 0),
+        Quaternion.Euler(0, 0, 0), //DT **
+        Quaternion.Euler(0, 0, 90), //RL ***
+        //Quaternion.Euler(0, 0, 180),
+        //Quaternion.Euler(0, 0, 270),
+        Quaternion.Euler(90, 0, 0), //FB *
+        //Quaternion.Euler(270, 0, 0),
         //Quaternion.Euler(45, 0, 0),
         //Quaternion.Euler(-45, 0, 0),
-        //Quaternion.Euler(135, 0, 0), // in depth diagonal
+        Quaternion.Euler(135, 0, 0), // TD, FB **
         //Quaternion.Euler(-135, 0, 0),
         //Quaternion.Euler(0, 0, -45),
         //Quaternion.Euler(0, 0, 45),
-        //Quaternion.Euler(0, 0, -135),
+        Quaternion.Euler(0, 0, -135), // LR, TD ***
         //Quaternion.Euler(0, 0, 135),
         //Quaternion.Euler(0, 45, 90),
         //Quaternion.Euler(0, 135, 90),
-        //Quaternion.Euler(0, -45, 90),
+        Quaternion.Euler(0, -45, 90), // RL, BF *
         //Quaternion.Euler(0, -135, 90)
     };
 
@@ -122,7 +128,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     private GameObject mainCamera;
     private bool calibrationStatus = false; //should be false at start
     public GameObject startButton;
-    private bool play_audio;
+    private bool colliderCheck;
 
 
     private List<(bool, Vector2, Quaternion, int, bool)> participantTrials; // task type (true: ring, false: tunnel), ID, rotation, task execution type, feedback type
@@ -165,7 +171,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
             return;
         }
 
-        if (!isSteering & currentTarget != null)
+        if (!isSteering & currentTarget!=null)
         {
             
             float forward_displacement = Mathf.Abs(Vector3.Dot(currentTarget.transform.GetChild(0).transform.position - currentTarget_position_init, currentPath.transform.up)); // calculating displacement for starting traverse status
@@ -237,7 +243,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         }
 
         //Decompose trial condition
-        (bool task_type, Vector2 id, Quaternion rotation, int execType, bool feedback) = participantTrials[currentTrial];
+        (bool task_type, Vector2 id, Quaternion rotation, int execType, bool colliderState) = participantTrials[currentTrial];
         float len = id.x;
         float width = id.y;
 
@@ -257,6 +263,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
             currentPath = Instantiate(SelectTunPrefab(width), targetPosition, rotation);
             currentPath.transform.localScale = new Vector3(width+0.01f, len / 2, width + 0.01f); // len/2 because the prefab is already 2 units long. +0.01f to adjust tunnel width based on the ball thickness
         }
+        colliderCheck = true;
 
         //create target
         Vector3 pathForward = currentPath.transform.up;
@@ -264,27 +271,37 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         Vector3 target_instant_position = targetPosition - target_offset_init * pathForward;
         currentTarget_position_init = target_instant_position; // saving ring start point for PLAN B of traverse status calculation
 
-        if (task_type)
+        if (colliderCheck)
         {
-            currentTarget = Instantiate(SelectRingPrefab(width), target_instant_position, rotation);
+            currentTarget = SelectRingPrefab_Collider(width);
+            currentTarget.transform.position = target_instant_position;
+            currentTarget.transform.rotation = rotation;
         }
         else
         {
-            currentTarget = Instantiate(SelectBallPrefab(width), target_instant_position, rotation);
+            //currentTarget = Instantiate(SelectRingPrefab(width), target_instant_position, rotation);
+            currentTarget = SelectRingPrefab_Collider(width);
+            currentTarget.transform.position = target_instant_position;
+            currentTarget.transform.rotation = rotation;
         }
-        currentTarget.transform.forward = currentPath.transform.up; // to overcome problem regarding orientation of the ring-to be prependicular to wire\
 
-        //TODO: make changes to the feedback type
-        play_audio = feedback;
+        
+        currentTarget.transform.forward = currentPath.transform.up; // to overcome problem regarding orientation of the ring-to be prependicular to wire\
+        
+        currentTarget.transform.GetChild(0).localPosition = Vector3.zero;
+        currentTarget.SetActive(true);
+
+        //play_audio = feedback;
+
 
         //saving tracking information as output for each trial
-        SetupSteeringTrackOutput(width, len, rotation, task_type, trialRep,execType,feedback);
+        SetupSteeringTrackOutput(width, len, rotation, task_type, trialRep,execType,colliderState);
         //update trial info for saving tracking info in output file
         trial_verification = false;
         trialL = len;
         trialR = rotation;
         trialW = width;
-        trialF = feedback;
+        trialF = colliderState;
         trialTask = task_type;
         SteeringTime_trial = 0f;
         errorNumber_trial = 0;
@@ -300,22 +317,22 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         switch (conditionIndex)
         {
             case 0:
-                debugText.updateText("Fast (Audio)");
+                debugText.updateText("Controller"); //Fast (Collider)
                 break;
             case 1:
-                debugText.updateText("Fast & Accurate (Audio)");
+                debugText.updateText("Hand"); //Fast & Accurate (Collider)
                 break;
             case 2:
-                debugText.updateText("Accurate (Audio)");
+                debugText.updateText("Accurate (Collider)");
                 break;
             case 3:
-                debugText.updateText("Fast (No Audio)");
+                debugText.updateText("Fast (No Collider)");
                 break;
             case 4:
-                debugText.updateText("Fast & Accurate (No Audio)");
+                debugText.updateText("Fast & Accurate (No Collider)");
                 break;
             case 5:
-                debugText.updateText("Accurate (No Audio)");
+                debugText.updateText("Accurate (No Collider)");
                 break;
             default:
                 debugText.updateText("Unknown Execution Type");
@@ -349,6 +366,31 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
         return selectedRingPrefab;
     }
+
+    GameObject SelectRingPrefab_Collider(float W)
+    {
+        GameObject selectedRingPrefab = null;
+
+        switch (W)
+        {
+            case 0.02f:
+                selectedRingPrefab = C_ringPrefabs[0];
+                break;
+            case 0.04f:
+                selectedRingPrefab = C_ringPrefabs[1];
+                break;
+            case 0.08f:
+                selectedRingPrefab = C_ringPrefabs[2];
+                break;
+            default:
+                UnityEngine.Debug.LogError("No ring prefab for W: " + W);
+                break;
+        }
+
+        return selectedRingPrefab;
+    }
+
+    
 
     GameObject SelectBallPrefab(float W)
     {
@@ -421,11 +463,15 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
             SaveWireTrack(x, y, z);
 
             // validating trial
+            //if (!colliderCheck)
+            //{
             float point_dis = Mathf.Sqrt((x * x) + (y * y));
             if (point_dis > (trialW / 2) + 0.01)
             {
                 FailTrial();
             }
+            //}
+            
             //debug only
             //else
             //{
@@ -509,8 +555,15 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
         isSteering = false;
         // destroy previous trial objects
-        if (currentTarget != null) Destroy(currentTarget);
+        
+        if (currentTarget != null)
+        {
+            currentTarget.SetActive(false);
+            currentTarget = null;
+        }
         if (currentPath != null) Destroy(currentPath);
+        
+        
 
         if (trial_verification)
         {
@@ -519,7 +572,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         }
         else
         {
-            if(play_audio)
+            if(true)
                 error_sound.Play();
         }
         
@@ -575,7 +628,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         {
             bool taskType = cond.Item1;
             int execType = cond.Item2;
-            bool feedback = cond.Item3;
+            bool colliderState = cond.Item3;
 
             foreach (var id in shuffledIDs)
             {
@@ -583,7 +636,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
                 foreach (var rot in shuffledRotations)
                 {
-                    trials.Add((taskType, difficulty, rot, execType, feedback));
+                    trials.Add((taskType, difficulty, rot, execType, colliderState));
                 }
             }
         }
@@ -607,7 +660,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         if (isSteering)
         {
             errorNumber_trial++;
-            if(play_audio)
+            if(true)
                 error_sound.Play();
             OnHitVisualFeedback(trialTask);
             errorSW.Restart();
@@ -696,7 +749,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
         using (StreamWriter writer = new StreamWriter(trackingOutputFile, false))
         {
-            writer.WriteLine("PID,taskType,rightHanded,width,length,feedback,rotation,execType,trialRep,PositionX,PositionY,PositionZ,Movement,Speed,Timestamp");
+            writer.WriteLine("PID,taskType,rightHanded,width,length,collider,rotation,execType,trialRep,PositionX,PositionY,PositionZ,Movement,Speed,Timestamp");
         }
     }
 
@@ -714,7 +767,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         {
             using (StreamWriter writer = new StreamWriter(steeringInfoOutputFile, true))
             {
-                writer.WriteLine("PID,isMale,rightHanded,taskType,width,length,feedback,rotation,execType,trialRep,totalTime,errorTime,errorNumber,isValid");
+                writer.WriteLine("PID,isMale,rightHanded,taskType,width,length,collider,rotation,execType,trialRep,totalTime,errorTime,errorNumber,isValid");
             }
         }
         else

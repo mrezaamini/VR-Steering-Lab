@@ -9,6 +9,9 @@ public class RayBrush : MonoBehaviour
     public LayerMask boardLayer;
     public float rayLength = 5f;
 
+    [Header("Stroke Offset")]
+    public float strokeSurfaceOffset = 0.00001f;
+
     [Header("Cursor Settings")]
     public GameObject cursorPrefab;
     public float cursorScale = 0.01f;
@@ -16,7 +19,12 @@ public class RayBrush : MonoBehaviour
     [Header("Ray Visual Settings")]
     public LineRenderer rayLine;        // assign a LineRenderer for the visible beam
     public float rayStartWidth = 0.002f; // fixed start width
-    public Color rayColor = Color.white; // optional
+    public Color rayColor = Color.white;
+
+    [Header("Stroke Visual Size")]
+    public Transform headTransform;          // XR camera / center eye
+    public float referenceDistance = 1f;   // distance where baseStrokeWidth looks "correct"
+    public float baseStrokeWidth = 0.002f;   // stroke thickness at referenceDistance
 
     private GameObject cursorInstance;
     private LineRenderer currentLine;
@@ -29,6 +37,10 @@ public class RayBrush : MonoBehaviour
     void Start()
     {
         gameManager = GetComponent<GameManager>();
+
+        // Head / XR camera
+        if (!headTransform && Camera.main != null)
+            headTransform = Camera.main.transform;
 
         // --- Cursor setup ---
         if (cursorPrefab != null)
@@ -66,7 +78,10 @@ public class RayBrush : MonoBehaviour
         // --- Find cursor position ---
         if (Physics.Raycast(ray, out hit, rayLength, boardLayer))
         {
-            cursorPos = hit.point;
+            // position slightly above the board along the surface normal
+            Vector3 surfacePos = hit.point + hit.normal * strokeSurfaceOffset;
+            cursorPos = surfacePos;
+
             string tag = hit.collider.tag;
 
             if (!hasStartedStroke && tag == "StartPoint")
@@ -74,12 +89,18 @@ public class RayBrush : MonoBehaviour
 
             if (gameManager.isSteering && hasStartedStroke)
             {
-                if (currentStroke.Count == 0 || Vector3.Distance(currentStroke[^1], hit.point) > 0.01f)
-                    AddPoint(hit.point);
+                if (currentStroke.Count == 0 ||
+                    Vector3.Distance(currentStroke[^1], surfacePos) > 0.01f)
+                {
+                    AddPoint(surfacePos);
+                }
             }
 
             if (hasStartedStroke && tag == "EndPoint")
+            {
                 EndStroke();
+                gameManager.EndTrial(true);
+            }
         }
         else
         {
@@ -118,8 +139,21 @@ public class RayBrush : MonoBehaviour
     {
         hasStartedStroke = true;
         gameManager.isSteering = true;
+
         currentLine = Instantiate(linePrefab);
+        currentLine.useWorldSpace = true; // important for world-size width
+
         currentStroke.Clear();
+
+        // ----- FIX VISUAL STROKE SIZE FOR THIS CONDITION -----
+        float dist = GetHeadToBoardDistance();
+        if (referenceDistance <= 1e-4f) referenceDistance = 1.0f;
+
+        // scale world width so visual angle is constant
+        float worldStrokeWidth = baseStrokeWidth * (dist / referenceDistance);
+
+        currentLine.startWidth = worldStrokeWidth;
+        currentLine.endWidth = worldStrokeWidth;
     }
 
     void AddPoint(Vector3 point)
@@ -136,6 +170,25 @@ public class RayBrush : MonoBehaviour
 
         if (currentStroke.Count > 1)
             allStrokes.Add(new List<Vector3>(currentStroke));
+    }
+
+    float GetHeadToBoardDistance()
+    {
+        if (!headTransform || !board)
+            return referenceDistance; // fallback
+
+        // Distance from head to the board plane (or just to its center)
+        Plane boardPlane = new Plane(board.transform.forward, board.transform.position);
+
+        Ray ray = new Ray(headTransform.position,
+                          board.transform.position - headTransform.position);
+
+        float dist;
+        if (boardPlane.Raycast(ray, out dist))
+            return Mathf.Max(0.01f, dist);
+
+        // Fallback: straight distance to board center
+        return Vector3.Distance(headTransform.position, board.transform.position);
     }
 
     public void SaveStrokes()
