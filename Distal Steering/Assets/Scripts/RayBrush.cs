@@ -33,7 +33,7 @@ public class RayBrush : MonoBehaviour
     private GameManager gameManager;
     private bool hasStartedStroke = false;
     private GameObject board;
-
+    private bool triggerSteering = false;
     void Start()
     {
         gameManager = GetComponent<GameManager>();
@@ -84,8 +84,18 @@ public class RayBrush : MonoBehaviour
 
             string tag = hit.collider.tag;
 
-            if (!hasStartedStroke && tag == "StartPoint")
+            if (!hasStartedStroke && tag == "StartPoint" && !triggerSteering)
+            {
+                triggerSteering = true;
+                gameManager.lockPosRot = true;
+            }
+                
+            //StartStroke();
+
+            if (!hasStartedStroke && tag == "Board" && triggerSteering)
                 StartStroke();
+
+
 
             if (gameManager.isSteering && hasStartedStroke)
             {
@@ -167,6 +177,7 @@ public class RayBrush : MonoBehaviour
     {
         hasStartedStroke = false;
         gameManager.isSteering = false;
+        triggerSteering = false;
 
         if (currentStroke.Count > 1)
             allStrokes.Add(new List<Vector3>(currentStroke));

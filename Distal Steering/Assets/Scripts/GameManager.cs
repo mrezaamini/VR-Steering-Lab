@@ -17,6 +17,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
     [Header("Steering")]
     public bool isSteering = false;
+    public bool lockPosRot = false;
 
     [Header("Scene")]
     public Camera mainCamera;
@@ -34,13 +35,15 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
     //current trial info
     private GameObject trial_path;
+    private int trial_path_type; // 1 : line, 2: circle, 3: sine
     private bool trial_verification = false;
     private float trialW;
     private float trialL;
-    private float trialVW;
-    private float trialVL;
+    private float trialW_A;
+    private float trialL_A;
+    private float trialD_A;
     private float trialD;
-    private int trialRotation; //1: LR, 2:RL, 3:TD, 4:DT
+    private int trialRotation; 
     private int tryCounter; // tries until successful steering. starts from 0
     private int trialRep; // to indicate which repetition this current trial is. starts from 0
     public int currentTrial = 0;
@@ -50,8 +53,8 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     //Experiment conditions
     //TODO
     public float BASE_DEPTH = 1f;
-    private List<(int, Vector3)> participantTrials;
-    List<Vector3> path_geometries = new List<Vector3>() // W L D (base depth)
+    private List<(int, Vector3, int)> participantTrials;
+    List<Vector3> path_geometries = new List<Vector3>() // W L D (desired depth). reference depth is 1f!
     {
         new Vector3(0.05f,0.3f,3f),
         new Vector3(0.05f,0.3f,5f)
@@ -91,6 +94,8 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
             //trial_verification = true;
             //EndTrial();
         }
+        if (trial_path_type == 1)
+            LP_VShandler.lockPositionAndRotation = lockPosRot;
     }
 
 
@@ -110,7 +115,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
             }
         }
 
-        (int path_type, Vector3 path_geo) = participantTrials[currentTrial];
+        (int path_type, Vector3 path_geo, int path_dir) = participantTrials[currentTrial];
         float base_width = path_geo.x;
         float base_len = path_geo.y;
         float desired_depth = path_geo.z;
@@ -121,7 +126,10 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
                 LP_VShandler.baseSize.x = base_len;
                 LP_VShandler.baseSize.y = base_width;
                 LP_VShandler.desiredDistance = desired_depth;
+                LP_VShandler.pathDirection = 1;
+                trial_path_type = 1;
                 trial_path = Linear_Path;
+                // = true;
                 break;
             default: UnityEngine.Debug.Log("Invalid Path Type!"); break;
         }
@@ -135,16 +143,23 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         trialL = base_len;
         trialW = base_width;
         trialD = desired_depth;
+        trialRotation = path_dir;
     }
 
 
 
-    public List<(int, Vector3)> GenerateParticipantTrial(int PID)
+    public List<(int, Vector3, int)> GenerateParticipantTrial(int PID) // path type, geo, direction
     {
-        List<(int, Vector3)> trials = new List<(int, Vector3)>();
+        List<(int, Vector3, int)> trials = new List<(int, Vector3, int)>();
+        System.Random rng = new System.Random(PID);
+
         foreach (var v in path_geometries)
         {
-            trials.Add((1, v));
+            int first = rng.Next(2);        // 0 or 1
+            int second = 1 - first;         // ensures both values appear
+
+            trials.Add((1, v, 1));
+            trials.Add((1, v, 1));
         }
 
         return trials;
@@ -213,6 +228,11 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         }
 
         trial_path.SetActive(false);
+        if (trial_path_type == 1)
+        {
+            lockPosRot = false;
+        }
+            
 
 
         //stoping and saving timers
@@ -246,10 +266,10 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     {
         switch (trial_rot)
         {
-            case 1: return "LR";
-            case 2: return "RL"; 
-            case 3: return "TD"; 
-            case 4: return "DT"; 
+            case 0: return "LR";
+            case 1: return "RL"; 
+            case 2: return "TD"; 
+            case 3: return "DT"; 
             default: return "N/A"; 
         }
     }
@@ -303,7 +323,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         {
             using (StreamWriter writer = new StreamWriter(steeringInfoOutputFile, true))
             {
-                writer.WriteLine("PID,isMale,rightHanded,width,length,visualWidth,visualLength,depth,rotation,trialRep,totalTime,isValid");
+                writer.WriteLine("PID,isMale,rightHanded,Width,Length,Depth,Dir,PathType,Width_A,Length_A,Depth_A,Rep,isValid,MovementTime");
             }
         }
         else
@@ -315,7 +335,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
     private void WriteSteeringInfoData()
     {
-        string newData = $"{participantID},{isMale},{isRightHanded},{trialW},{trialL},{trialVW},{trialVL},{trialD},{GetPathRotationName(trialRotation)},{trialRep},{SteeringTime_trial},{trial_verification}\n";
+        string newData = $"{participantID},{isMale},{isRightHanded},{trialW},{trialL},{trialD},{GetPathRotationName(trialRotation)},{trial_path_type},{trialW_A},{trialL_A},{trialD_A},{trialRep},{trial_verification},{SteeringTime_trial}\n";
         using (StreamWriter writer = new StreamWriter(steeringInfoOutputFile, true))
         {
             writer.WriteLine(newData);

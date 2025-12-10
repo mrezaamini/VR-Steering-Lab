@@ -1,3 +1,4 @@
+
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -7,11 +8,15 @@ public class VisualSizeHandler : MonoBehaviour
     [Header("References")]
     public Transform headTransform; // XR camera (headset)
 
+    [Header("Control")]
+    public bool lockPositionAndRotation = false; // if true, stop following head
+    public int pathDirection = 1;                // 0 = LR, 1 = RL
+
     [Header("Settings")]
     public float desiredDistance = 1.5f;      // meters in front of user
     public Vector2 baseSize = new Vector2(1f, 1f); // size at reference distance
     public float referenceDistance = 1.5f;    // distance where base size looks correct
-    public bool smoothFollow = true;
+    public bool smoothFollow = false;
     public float followSpeed = 5f;
 
     [Header("End Points")]
@@ -46,52 +51,63 @@ public class VisualSizeHandler : MonoBehaviour
 
         // --- 1. Place parent in front of head ---
         Vector3 targetPos = headTransform.position + headTransform.forward * desiredDistance;
-        Quaternion targetRot = Quaternion.LookRotation(-headTransform.up, -Vector3.forward);
+        Quaternion targetRot = Quaternion.LookRotation(-Vector3.up, -Vector3.forward);
+        //Vector3 flatForward = Vector3.ProjectOnPlane(headTransform.forward, Vector3.up).normalized;
+
+
+
+        // Apply direction (simple 180° flip around local X if pathDirection == 1)
+        if (pathDirection == 0)
+        {
+            //targetRot = Quaternion.LookRotation(-headTransform.up, Vector3.forward);
+            //targetRot *= Quaternion.Euler(180f, 0f, 0f);
+        }
 
         float scaleFactor = desiredDistance / referenceDistance;
-
-        // Parent visual size at this distance (same logic you had, but any mapping works)
         float parentVisualWidth = baseSize.x * scaleFactor;
         float parentVisualLength = baseSize.y * scaleFactor;
 
         Vector3 targetScale = new Vector3(
-            parentVisualWidth,  // width scale factor
+            parentVisualWidth,
             1f,
-            parentVisualLength  // length scale factor
+            parentVisualLength
         );
 
-        if (smoothFollow)
+        // If locked, don't change position or rotation anymore
+        if (!lockPositionAndRotation)
         {
-            transform.position = Vector3.Lerp(transform.position, targetPos, Time.deltaTime * followSpeed);
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * followSpeed);
-            transform.localScale = Vector3.Lerp(transform.localScale, targetScale, Time.deltaTime * followSpeed);
-        }
-        else
-        {
-            transform.position = targetPos;
-            transform.rotation = targetRot;
-            transform.localScale = targetScale;
+            if (smoothFollow)
+            {
+                transform.position = Vector3.Lerp(transform.position, targetPos, Time.deltaTime * followSpeed);
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * followSpeed);
+            }
+            else
+            {
+                transform.position = targetPos;
+                transform.rotation = targetRot;
+            }
+            if (smoothFollow)
+                transform.localScale = Vector3.Lerp(transform.localScale, targetScale, Time.deltaTime * followSpeed);
+            else
+                transform.localScale = targetScale;
         }
 
-        // --- 2. Target child visual width in WORLD units at this distance ---
+       
+        
+
+        // --- rest of your code (children width, endpoints positioning) stays the same ---
         float childWorldWidthTarget = childBaseVisualWidth * scaleFactor;
 
-        // Make each child actually have that world width (using its mesh size)
-        float childHalfWorldWidth = 0f;
         FixChildVisualWidth(startPoint, childWorldWidthTarget, out float startHalf);
         FixChildVisualWidth(endPoint, childWorldWidthTarget, out float endHalf);
 
-        // We assume start/end use the same mesh, so either half is fine;
-        // if not, you could keep them separate.
-        childHalfWorldWidth = Mathf.Max(startHalf, endHalf);
+        float childHalfWorldWidth = Mathf.Max(startHalf, endHalf);
+        float parentHalfWorldWidth = parentLocalHalfWidth * Mathf.Abs(transform.lossyScale.x);
 
-        // --- 3. Compute actual parent half-width in WORLD space ---
-        float parentHalfWorldWidth =
-            parentLocalHalfWidth * Mathf.Abs(transform.lossyScale.x);
-
-        // --- 4. Place children at center ± (parentHalf + childHalf) ---
         PositionChildren(parentHalfWorldWidth, childHalfWorldWidth);
+        //lockPositionAndRotation = true;
     }
+
 
     /// <summary>
     /// Scales the child so its *actual* world width matches childWorldWidthTarget.
