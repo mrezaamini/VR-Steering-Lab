@@ -24,6 +24,13 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     public GameObject Linear_Path;
     public VisualSizeHandler LP_VShandler;
 
+    [Header("Drawing")]
+    public RayBrush rayBrush;        // assign in Inspector
+    public Transform boardTransform; // the board plane transform
+
+    // Stroke output file
+    private string strokeOutputFile;
+
     //data tracking
     private string trackingOutputFile;
     private string steeringInfoOutputFile;
@@ -50,14 +57,44 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     private Vector2? previous_track; //previous track point to calculate displacement and speed
     private double? previous_time;
 
+
+    //current trial stroke info
+    private float trialLateralSD = float.NaN;
+    private float trialLateralMean = float.NaN;
+    private int trialStrokeN = 0;
+
     //Experiment conditions
     //TODO
     public float BASE_DEPTH = 1f;
     private List<(int, Vector3, int)> participantTrials;
-    List<Vector3> path_geometries = new List<Vector3>() // W L D (desired depth). reference depth is 1f!
+    List<Vector2> path_geometries = new List<Vector2>() // W L at reference depth is 1f!
     {
-        new Vector3(0.05f,0.3f,3f),
-        new Vector3(0.05f,0.3f,5f)
+        //new Vector3(0.0349f,0.443388f),
+        //new Vector3(0.0349f,0.535898f),
+        //new Vector3(0.0349f,0.630596f),
+        //new Vector3(0.0349f,0.932615f),
+        //new Vector3(0.0524f,0.443388f),
+        //new Vector3(0.0524f,0.535898f),
+        //new Vector3(0.0524f,0.630596f),
+        //new Vector3(0.0524f,0.932615f),
+        //new Vector3(0.0786f,0.443388f),
+        //new Vector3(0.0786f,0.535898f),
+        //new Vector3(0.0786f,0.630596f),
+        //new Vector3(0.0786f,0.932615f),
+        //new Vector3(0.1048f,0.443388f),
+        new Vector3(0.1048f,0.535898f),
+        //new Vector3(0.1048f,0.630596f),
+        //new Vector3(0.1048f,0.932615f),
+    };
+
+    List<float> depth_list = new List<float>()
+    {
+        0.6666f,
+        0.8f,
+        1f,
+        1.3333f,
+        2f,
+        4f
     };
 
 
@@ -72,6 +109,23 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
         steeringSW = new Stopwatch();
         errorSW = new Stopwatch();
+
+        // Setup global stroke CSV file
+        string outDir = Path.Combine(Application.dataPath, "CapturedData");
+        if (!Directory.Exists(outDir))
+            Directory.CreateDirectory(outDir);
+
+        strokeOutputFile = Path.Combine(outDir, $"{participantID}_strokes.csv");
+
+        if (!File.Exists(strokeOutputFile))
+        {
+            using (var writer = new StreamWriter(strokeOutputFile, true))
+            {
+                writer.WriteLine("PID,Width,Length,Depth,Rotation,Rep,PointIndex,BoardX,BoardY,BoardZ,WorldX,WorldY,WorldZ");
+            }
+        }
+
+        SetupSteeringInfoOutput();
 
         NextTrial();
 
@@ -126,7 +180,8 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
                 LP_VShandler.baseSize.x = base_len;
                 LP_VShandler.baseSize.y = base_width;
                 LP_VShandler.desiredDistance = desired_depth;
-                LP_VShandler.pathDirection = 1;
+                LP_VShandler.pathDirection = path_dir;
+                LP_VShandler.referenceDistance = 1;
                 trial_path_type = 1;
                 trial_path = Linear_Path;
                 // = true;
@@ -144,6 +199,10 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         trialW = base_width;
         trialD = desired_depth;
         trialRotation = path_dir;
+
+        trialStrokeN = 0;
+        trialLateralMean = float.NaN;
+        trialLateralSD = float.NaN;
     }
 
 
@@ -152,14 +211,15 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     {
         List<(int, Vector3, int)> trials = new List<(int, Vector3, int)>();
         System.Random rng = new System.Random(PID);
+        List<Vector3> path_conditions = combine_path_geo(path_geometries, depth_list);
 
-        foreach (var v in path_geometries)
+        foreach (var v in path_conditions)
         {
             int first = rng.Next(2);        // 0 or 1
             int second = 1 - first;         // ensures both values appear
 
-            trials.Add((1, v, 1));
-            trials.Add((1, v, 1));
+            trials.Add((1, v, first));
+            trials.Add((1, v, second));
         }
 
         return trials;
@@ -171,6 +231,22 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         //get hit point relative x and y
         //if offset greater than path width => fail trial
 
+    }
+
+    private List<Vector3> combine_path_geo(List<Vector2> path_lw, List<float> depths)
+    {
+        List<Vector3> result = new List<Vector3>();
+
+        foreach (var v2 in path_lw)
+        {
+            foreach (var f in depths)
+            {
+
+                result.Add(new Vector3(v2.x, v2.y, f));
+            }
+        }
+
+        return result;
     }
 
     private void SaveWireTrack(float x, float y) // write tracking information to file: position x, position y, speed
@@ -218,6 +294,19 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     {
         if (trial_veri)
         {
+            // === SAVE STROKE FOR THIS TRIAL ===
+            if (rayBrush != null && rayBrush.LastStroke != null && rayBrush.LastStroke.Count > 1)
+            {
+                SaveStrokeForCurrentTrial(
+                    trialRep,
+                    trialW,
+                    trialL,
+                    trialD,
+                    trialRotation,
+                    rayBrush.LastStroke
+                );
+            }
+
             currentTrial++;
             trial_verification = true;
             success_sound.Play();
@@ -232,13 +321,17 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         {
             lockPosRot = false;
         }
-            
+
+       
+
 
 
         //stoping and saving timers
-        //steeringSW.Stop();
-        //SteeringTime_trial = steeringSW.Elapsed.TotalMilliseconds;
-        //steeringSW.Reset();
+        steeringSW.Stop();
+        SteeringTime_trial = steeringSW.Elapsed.TotalMilliseconds;
+        steeringSW.Reset();
+
+        WriteSteeringInfoData();
 
         //errorSW.Stop(); // to make sure it is stopped at the end
         //errorTime_trial += errorSW.Elapsed.TotalMilliseconds;
@@ -309,6 +402,81 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     }
 
 
+    private void SaveStrokeForCurrentTrial(
+    int rep,
+    float width,
+    float length,
+    float depth,
+    int rotation,
+    List<Vector3> worldPoints)
+    {
+        if (boardTransform == null)
+        {
+            UnityEngine.Debug.LogWarning("Board transform not set; saving world coords only.");
+        }
+        List<float> lateral = new List<float>();
+
+        using (var writer = new StreamWriter(strokeOutputFile, true))
+        {
+            for (int i = 0; i < worldPoints.Count; i++)
+            {
+                Vector3 wp = worldPoints[i];
+
+                // Project into board's local space (so X/Y are in board coordinates)
+                float bx = wp.x;
+                float by = wp.y;
+                float bz = wp.z;
+
+                if (boardTransform != null)
+                {
+                    Vector3 local = boardTransform.InverseTransformPoint(wp);
+                    if (rotation == 1)
+                    {
+                        local.x = -local.x;
+                        local.z = -local.z; //rotate based on direction
+                    }
+                    bx = local.x;
+                    by = local.y;
+                    bz = local.z;
+
+                    float lateralVal = local.z;  // <-- lateral freedom axes
+                    lateral.Add(lateralVal);
+                }
+
+                writer.WriteLine(
+                    $"{participantID}," +
+                    $"{width}," +
+                    $"{length}," +
+                    $"{depth}," +
+                    $"{GetPathRotationName(rotation)}," +
+                    $"{rep}," +
+                    $"{i}," +
+                    $"{bx},{by},{bz}," +
+                    $"{wp.x},{wp.y},{wp.z}"
+                );
+            }
+        }
+
+        trialStrokeN = lateral.Count;
+        if (trialStrokeN > 1)
+        {
+            float sum = 0f, sumSq = 0f;
+            foreach (var v in lateral) { sum += v; sumSq += v * v; }
+
+            float mean = sum / trialStrokeN;
+            float var = (sumSq - trialStrokeN * mean * mean) / (trialStrokeN - 1); // sample variance
+            if (var < 0f) var = 0f;
+
+            trialLateralMean = mean;
+            trialLateralSD = Mathf.Sqrt(var);
+        }
+        else
+        {
+            trialLateralMean = float.NaN;
+            trialLateralSD = float.NaN;
+        }
+    }
+
     private void SetupSteeringInfoOutput()
     {
         string trackingOutputPath = Path.Combine(Application.dataPath, "CapturedData");
@@ -323,7 +491,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         {
             using (StreamWriter writer = new StreamWriter(steeringInfoOutputFile, true))
             {
-                writer.WriteLine("PID,isMale,rightHanded,Width,Length,Depth,Dir,PathType,Width_A,Length_A,Depth_A,Rep,isValid,MovementTime");
+                writer.WriteLine("PID,isMale,rightHanded,Width_B,Length_B,Depth,Dir,PathType,Width_P,Length_P,Width_A,Length_A,Rep,isValid,MovementTime,StrokeN,MeanX,SDx");
             }
         }
         else
@@ -335,12 +503,43 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
     private void WriteSteeringInfoData()
     {
-        string newData = $"{participantID},{isMale},{isRightHanded},{trialW},{trialL},{trialD},{GetPathRotationName(trialRotation)},{trial_path_type},{trialW_A},{trialL_A},{trialD_A},{trialRep},{trial_verification},{SteeringTime_trial}\n";
+        //calculate actual size of the path
+        float w_p = trialW * (trialD / BASE_DEPTH);
+        float l_p = trialL * (trialD / BASE_DEPTH);
+
+        //calculate angular size of the path
+        string newData = $"{participantID},{isMale},{isRightHanded},{trialW},{trialL},{trialD},{GetPathRotationName(trialRotation)},{trial_path_type},{w_p},{l_p},{GetAngularWidth(trialW)},{GetAngularLength(trialL)},{trialRep},{trial_verification},{SteeringTime_trial},{trialStrokeN},{trialLateralMean},{trialLateralSD}\n";
         using (StreamWriter writer = new StreamWriter(steeringInfoOutputFile, true))
         {
             writer.WriteLine(newData);
         }
     } 
+
+    private float GetAngularWidth(float w)
+    {
+        switch (w)
+        {
+            case 0.0349f: return 2f;
+            case 0.0524f: return 3f;
+            case 0.0786f: return 4.5f;
+            case 0.1048f: return 6f;
+            default: return float.NaN;
+
+        }
+    }
+
+    private float GetAngularLength(float w)
+    {
+        switch (w)
+        {
+            case 0.443388f: return 25f;
+            case 0.535898f: return 30f;
+            case 0.630596f: return 35f;
+            case 0.932615f: return 50f;
+            default: return float.NaN;
+
+        }
+    }
 
     private void adjustPathSize() // to adjust path size based on the depth relative to the base condition
     {

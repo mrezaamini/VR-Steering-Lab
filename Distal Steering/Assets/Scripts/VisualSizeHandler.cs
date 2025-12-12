@@ -15,7 +15,7 @@ public class VisualSizeHandler : MonoBehaviour
     [Header("Settings")]
     public float desiredDistance = 1.5f;      // meters in front of user
     public Vector2 baseSize = new Vector2(1f, 1f); // size at reference distance
-    public float referenceDistance = 1.5f;    // distance where base size looks correct
+    public float referenceDistance = 1f;    // distance where base size looks correct
     public bool smoothFollow = false;
     public float followSpeed = 5f;
 
@@ -43,6 +43,8 @@ public class VisualSizeHandler : MonoBehaviour
             // ASSUME bar width is along local X. Change to mb.size.y/mb.size.z if needed.
             parentLocalHalfWidth = mb.size.x * 0.5f;
         }
+        smoothFollow = false;
+        referenceDistance = 1f;
     }
 
     void LateUpdate()
@@ -57,13 +59,14 @@ public class VisualSizeHandler : MonoBehaviour
 
 
         // Apply direction (simple 180° flip around local X if pathDirection == 1)
-        if (pathDirection == 0)
+        if (pathDirection == 0) //
         {
-            //targetRot = Quaternion.LookRotation(-headTransform.up, Vector3.forward);
-            //targetRot *= Quaternion.Euler(180f, 0f, 0f);
+            targetRot = Quaternion.LookRotation(-Vector3.up, Vector3.forward);
+            targetRot *= Quaternion.Euler(180f, 0f, 0f);
         }
 
         float scaleFactor = desiredDistance / referenceDistance;
+        scaleFactor = scaleFactor / 10; // plane is already 10mx10m
         float parentVisualWidth = baseSize.x * scaleFactor;
         float parentVisualLength = baseSize.y * scaleFactor;
 

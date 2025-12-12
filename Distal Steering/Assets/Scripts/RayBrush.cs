@@ -34,6 +34,8 @@ public class RayBrush : MonoBehaviour
     private bool hasStartedStroke = false;
     private GameObject board;
     private bool triggerSteering = false;
+
+    public List<Vector3> LastStroke { get; private set; } = new List<Vector3>(); //last completed stroke (world-space points)
     void Start()
     {
         gameManager = GetComponent<GameManager>();
@@ -148,12 +150,13 @@ public class RayBrush : MonoBehaviour
     void StartStroke()
     {
         hasStartedStroke = true;
-        gameManager.isSteering = true;
+        gameManager.OnStartTraversing();
 
         currentLine = Instantiate(linePrefab);
         currentLine.useWorldSpace = true; // important for world-size width
 
         currentStroke.Clear();
+        LastStroke.Clear(); // clear last stroke when a new one starts
 
         // ----- FIX VISUAL STROKE SIZE FOR THIS CONDITION -----
         float dist = GetHeadToBoardDistance();
@@ -180,7 +183,19 @@ public class RayBrush : MonoBehaviour
         triggerSteering = false;
 
         if (currentStroke.Count > 1)
+        {
+            // store completed stroke
             allStrokes.Add(new List<Vector3>(currentStroke));
+            LastStroke = new List<Vector3>(currentStroke);
+        }
+
+        // --- REMOVE VISIBLE LINE AFTER SAVING ---
+        if (currentLine != null)
+        {
+            Destroy(currentLine.gameObject);
+        }
+
+        currentLine = null;
     }
 
     float GetHeadToBoardDistance()

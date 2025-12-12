@@ -6986,6 +6986,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a05aa6b23f4cc9645825fa00328d45c2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!4 &930402363 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 7564602047361753775, guid: 48c060acf9e9a294cb0a36744829a99c, type: 3}
+  m_PrefabInstance: {fileID: 1937242982812730551}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &944886499
 GameObject:
   m_ObjectHideFlags: 0
@@ -15845,6 +15850,18 @@ PrefabInstance:
       propertyPath: m_Name
       value: LinearPath
       objectReference: {fileID: 0}
+    - target: {fileID: 5057491774496173389, guid: 48c060acf9e9a294cb0a36744829a99c, type: 3}
+      propertyPath: smoothFollow
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5057491774496173389, guid: 48c060acf9e9a294cb0a36744829a99c, type: 3}
+      propertyPath: referenceDistance
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5057491774496173389, guid: 48c060acf9e9a294cb0a36744829a99c, type: 3}
+      propertyPath: childBaseVisualWidth
+      value: 0.5
+      objectReference: {fileID: 0}
     - target: {fileID: 7564602047361753775, guid: 48c060acf9e9a294cb0a36744829a99c, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -15941,11 +15958,14 @@ MonoBehaviour:
   success_sound: {fileID: 1622218504}
   error_sound: {fileID: 58361622}
   isSteering: 0
+  lockPosRot: 0
   mainCamera: {fileID: 0}
   Linear_Path: {fileID: 930402351}
   LP_VShandler: {fileID: 930402357}
+  rayBrush: {fileID: 8101658645104959578}
+  boardTransform: {fileID: 930402363}
   currentTrial: 0
-  BASE_DEPTH: 4
+  BASE_DEPTH: 1
 --- !u!114 &8101658645104959578
 MonoBehaviour:
   m_ObjectHideFlags: 0
