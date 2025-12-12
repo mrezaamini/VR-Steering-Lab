@@ -54,8 +54,9 @@ public class VisualSizeHandler : MonoBehaviour
         // --- 1. Place parent in front of head ---
         Vector3 targetPos = headTransform.position + headTransform.forward * desiredDistance;
         Quaternion targetRot = Quaternion.LookRotation(-Vector3.up, -Vector3.forward);
-        //Vector3 flatForward = Vector3.ProjectOnPlane(headTransform.forward, Vector3.up).normalized;
-
+        Vector3 flatForward = Vector3.ProjectOnPlane(headTransform.forward, Vector3.up).normalized;
+        //Vector3 normal = (headTransform.position - targetPos).normalized; // board faces head
+        //Quaternion targetRot = Quaternion.LookRotation(normal, Vector3.up);
 
 
         // Apply direction (simple 180° flip around local X if pathDirection == 1)
@@ -63,6 +64,7 @@ public class VisualSizeHandler : MonoBehaviour
         {
             targetRot = Quaternion.LookRotation(-Vector3.up, Vector3.forward);
             targetRot *= Quaternion.Euler(180f, 0f, 0f);
+            //targetRot *= Quaternion.Euler(0f, 180f, 0f);
         }
 
         float scaleFactor = desiredDistance / referenceDistance;

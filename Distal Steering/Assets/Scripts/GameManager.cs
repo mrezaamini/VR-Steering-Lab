@@ -14,6 +14,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     [Header("UI")]
     public AudioSource success_sound;
     public AudioSource error_sound;
+    public CanvasPopup popupScript;
 
     [Header("Steering")]
     public bool isSteering = false;
@@ -50,7 +51,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     private float trialL_A;
     private float trialD_A;
     private float trialD;
-    private int trialRotation; 
+    public int trialRotation; 
     private int tryCounter; // tries until successful steering. starts from 0
     private int trialRep; // to indicate which repetition this current trial is. starts from 0
     public int currentTrial = 0;
@@ -62,10 +63,14 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     private float trialLateralSD = float.NaN;
     private float trialLateralMean = float.NaN;
     private int trialStrokeN = 0;
+    private float trialTotalDistance = float.NaN;
 
     //Experiment conditions
     //TODO
     public float BASE_DEPTH = 1f;
+    public float CurrentWidthP;
+    public float CurrentLengthP;
+
     private List<(int, Vector3, int)> participantTrials;
     List<Vector2> path_geometries = new List<Vector2>() // W L at reference depth is 1f!
     {
@@ -121,7 +126,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         {
             using (var writer = new StreamWriter(strokeOutputFile, true))
             {
-                writer.WriteLine("PID,Width,Length,Depth,Rotation,Rep,PointIndex,BoardX,BoardY,BoardZ,WorldX,WorldY,WorldZ");
+                writer.WriteLine("PID,Width,Length,Depth,Width_P,Length_P,Rotation,Rep,PointIndex,BoardX,BoardY,BoardZ,WorldX,WorldY,WorldZ");
             }
         }
 
@@ -200,6 +205,10 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         trialD = desired_depth;
         trialRotation = path_dir;
 
+        CurrentWidthP = trialW * (trialD / BASE_DEPTH);
+        CurrentLengthP = trialL * (trialD / BASE_DEPTH);
+
+        trialTotalDistance = 0;
         trialStrokeN = 0;
         trialLateralMean = float.NaN;
         trialLateralSD = float.NaN;
@@ -314,6 +323,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         else
         {
             error_sound.Play();
+            popupScript.ShowPopup();
         }
 
         trial_path.SetActive(false);
@@ -340,11 +350,13 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         //WriteSteeringInfoData();
 
         isSteering = false;
+        CurrentWidthP = 0;
+        CurrentLengthP = 0;
         //  TODO: destroy previous trial objects
         //if (currentTarget != null) Destroy(currentTarget);
         //if (currentPath != null) Destroy(currentPath);
 
-        
+
         NextTrial();
 
     }
@@ -415,7 +427,8 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
             UnityEngine.Debug.LogWarning("Board transform not set; saving world coords only.");
         }
         List<float> lateral = new List<float>();
-
+        float totalDist = 0f;
+        Vector2? prev = null;
         using (var writer = new StreamWriter(strokeOutputFile, true))
         {
             for (int i = 0; i < worldPoints.Count; i++)
@@ -427,27 +440,60 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
                 float by = wp.y;
                 float bz = wp.z;
 
-                if (boardTransform != null)
+                //if (boardTransform != null)
+                //{
+                //    Vector3 local = boardTransform.InverseTransformPoint(wp);
+                //    if (rotation == 1)
+                //    {
+                //        local.x = -local.x;
+                //        //local.z = -local.z; //rotate based on direction
+                //    }
+
+                //    float mx = local.x * boardTransform.lossyScale.x;
+                //    float mz = local.z * boardTransform.lossyScale.z;
+                //    mx *= 10f;
+                //    mz *= 10f;
+
+                //    //bx = local.x;
+                //    bx = mx;
+                //    by = local.y;
+                //    //bz = local.z;
+                //    bz = mz;
+
+                //    float lateralVal = mz;  // <-- lateral freedom axes
+                //    lateral.Add(lateralVal);
+                //}
+                Vector3 b = WorldToBoardMeters_DirInvariant(boardTransform, Camera.main.transform, wp, boardTransform.right);
+
+
+                // If you want LR and RL to have the same progress direction:
+                if (rotation == 1) //RL
                 {
-                    Vector3 local = boardTransform.InverseTransformPoint(wp);
-                    if (rotation == 1)
-                    {
-                        local.x = -local.x;
-                        local.z = -local.z; //rotate based on direction
-                    }
-                    bx = local.x;
-                    by = local.y;
-                    bz = local.z;
-
-                    float lateralVal = local.z;  // <-- lateral freedom axes
-                    lateral.Add(lateralVal);
+                    b.x = -b.x;     // flip only task axis
                 }
+                bx = b.x;  
+                by = b.y;  
+                bz = -b.z;
 
+                Vector2 curr = new Vector2(bx, bz); 
+                if (prev.HasValue)
+                {
+                    totalDist += Vector2.Distance(prev.Value, curr);
+                }
+                prev = curr;
+
+                // If you want lateral deviation across width and your width axis is vertical on board:
+                float lateralVal = bz; // or bx depending on your definition
+                lateral.Add(lateralVal);
+                float w_p = trialW * (trialD / BASE_DEPTH);
+                float l_p = trialL * (trialD / BASE_DEPTH);
                 writer.WriteLine(
                     $"{participantID}," +
                     $"{width}," +
                     $"{length}," +
                     $"{depth}," +
+                    $"{w_p}," +
+                    $"{l_p}," +
                     $"{GetPathRotationName(rotation)}," +
                     $"{rep}," +
                     $"{i}," +
@@ -456,7 +502,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
                 );
             }
         }
-
+        trialTotalDistance = totalDist;
         trialStrokeN = lateral.Count;
         if (trialStrokeN > 1)
         {
@@ -477,6 +523,37 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         }
     }
 
+    private static Vector3 WorldToBoardMeters_DirInvariant(
+    Transform board,
+    Transform head,          // pass Camera.main.transform or your headTransform
+    Vector3 worldPoint,
+    Vector3 taskAxisWorld    // pass board.right if red == board.right
+)
+    {
+        Vector3 rel = worldPoint - board.position;
+
+        // 1) Task axis (red)
+        Vector3 T = taskAxisWorld.normalized;
+
+        // 2) Normal axis (green): choose whichever of forward/backward points toward the user
+        Vector3 toHead = (head.position - board.position).normalized;
+        Vector3 N = board.forward.normalized;
+        if (Vector3.Dot(N, toHead) < 0f) N = -N;  // ensure N points to the user
+
+        // 3) Up axis on the board (blue), consistent across LR/RL
+        // Try U = cross(N,T). If that ends up inverted relative to board.up, flip it.
+        Vector3 U = Vector3.Cross(N, T).normalized;
+
+        // Optional: keep U roughly aligned with board.up for intuitive "up"
+        if (Vector3.Dot(U, board.up) < 0f) U = -U;
+
+        float bx = Vector3.Dot(rel, T); // along red (task)
+        float by = Vector3.Dot(rel, U); // along blue (on-plane up/down)
+        float bz = Vector3.Dot(rel, N); // along green (off-plane, should be ~offset)
+
+        return new Vector3(bx, by, bz);
+    }
+
     private void SetupSteeringInfoOutput()
     {
         string trackingOutputPath = Path.Combine(Application.dataPath, "CapturedData");
@@ -491,7 +568,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         {
             using (StreamWriter writer = new StreamWriter(steeringInfoOutputFile, true))
             {
-                writer.WriteLine("PID,isMale,rightHanded,Width_B,Length_B,Depth,Dir,PathType,Width_P,Length_P,Width_A,Length_A,Rep,isValid,MovementTime,StrokeN,MeanX,SDx");
+                writer.WriteLine("PID,isMale,rightHanded,Width_B,Length_B,Depth,Dir,PathType,Width_P,Length_P,Width_A,Length_A,Rep,isValid,MovementTime,StrokeN,MeanX,SDx,MeanX_A,SDx_A,Ae,Ae_A");
             }
         }
         else
@@ -504,11 +581,25 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     private void WriteSteeringInfoData()
     {
         //calculate actual size of the path
-        float w_p = trialW * (trialD / BASE_DEPTH);
-        float l_p = trialL * (trialD / BASE_DEPTH);
+        
+
+        float meanA = MetersToVisualAngleDeg(trialLateralMean, trialD);
+        float sdA = MetersToVisualAngleDeg(trialLateralSD, trialD);
+
+        float Ae_A = MetersToVisualAngleDeg(trialTotalDistance, trialD);
+
+        if(Ae_A < GetAngularLength(trialL))
+        {
+            Ae_A = GetAngularLength(trialL);
+        }
+        if (trialTotalDistance < CurrentLengthP)
+        {
+            trialTotalDistance = CurrentLengthP;
+        }
+
 
         //calculate angular size of the path
-        string newData = $"{participantID},{isMale},{isRightHanded},{trialW},{trialL},{trialD},{GetPathRotationName(trialRotation)},{trial_path_type},{w_p},{l_p},{GetAngularWidth(trialW)},{GetAngularLength(trialL)},{trialRep},{trial_verification},{SteeringTime_trial},{trialStrokeN},{trialLateralMean},{trialLateralSD}\n";
+        string newData = $"{participantID},{isMale},{isRightHanded},{trialW},{trialL},{trialD},{GetPathRotationName(trialRotation)},{trial_path_type},{CurrentWidthP},{CurrentLengthP},{GetAngularWidth(trialW)},{GetAngularLength(trialL)},{trialRep},{trial_verification},{SteeringTime_trial},{trialStrokeN},{trialLateralMean},{trialLateralSD},{meanA},{sdA},{trialTotalDistance},{Ae_A}\n";
         using (StreamWriter writer = new StreamWriter(steeringInfoOutputFile, true))
         {
             writer.WriteLine(newData);
@@ -539,6 +630,12 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
             default: return float.NaN;
 
         }
+    }
+
+    private static float MetersToVisualAngleDeg(float sizeMeters, float distanceMeters)
+    {
+        if (float.IsNaN(sizeMeters) || distanceMeters <= 0f) return float.NaN;
+        return 2f * Mathf.Atan(sizeMeters / (2f * distanceMeters)) * Mathf.Rad2Deg;
     }
 
     private void adjustPathSize() // to adjust path size based on the depth relative to the base condition

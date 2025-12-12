@@ -35,6 +35,17 @@ public class RayBrush : MonoBehaviour
     private GameObject board;
     private bool triggerSteering = false;
 
+    [Header("Gate start/end using board-local coords")]
+    public float startPlaneX = 0f;          // x=0 is the start
+    public float startPlaneTolerance = 0.0001f; // meters, e.g., 1cm
+    public float lateralMargin = 0.0001f;       // extra margin beyond W/2
+    public int gateFrames = 1;                // 1 is fine with crossing
+
+    private float? prevProgress = null;
+    private int gateCount = 0;
+    private bool gateArmed = false;
+    public float gateTol = 0.0001f; // tolerance
+
     public List<Vector3> LastStroke { get; private set; } = new List<Vector3>(); //last completed stroke (world-space points)
     void Start()
     {
@@ -70,6 +81,8 @@ public class RayBrush : MonoBehaviour
     {
         if (board == null) return;
 
+        bool isSteeringNow = (hasStartedStroke && gameManager != null && gameManager.isSteering);
+
         Ray ray = new Ray(controller.position, controller.forward);
         RaycastHit hit;
         Vector3 cursorPos;
@@ -86,21 +99,93 @@ public class RayBrush : MonoBehaviour
 
             string tag = hit.collider.tag;
 
-            if (!hasStartedStroke && tag == "StartPoint" && !triggerSteering)
+            //if (!hasStartedStroke && tag == "StartPoint" && !triggerSteering)
+            //{
+            //    triggerSteering = true;
+            //    gameManager.lockPosRot = true;
+            //}
+
+            GetBoardLocalProgressLateral(surfacePos, out float prog, out float lat);
+
+
+            //if (!hasStartedStroke && triggerSteering)
+            //{
+            //    StartStroke();
+            //}
+            ////StartStroke();
+
+            //if (!hasStartedStroke && tag == "Board" && triggerSteering)
+            //    StartStroke();
+
+            Transform bt = gameManager.boardTransform;
+
+            // Physical sizes for this trial
+            float L = gameManager.CurrentLengthP;
+            float W = gameManager.CurrentWidthP;
+
+            // Axes (based on your confirmed debug)
+            Vector3 progressAxis = bt.right.normalized;    // dRight
+            Vector3 lateralAxis = bt.forward.normalized;  // dFwd
+            Vector3 origin = bt.position;
+
+            // Signed coordinates
+            float p = Vector3.Dot(surfacePos - origin, progressAxis);
+            float latO = Vector3.Dot(surfacePos - origin, lateralAxis);
+
+            float halfL = L * 0.5f;
+            float halfW = W * 0.5f;
+
+         
+            bool isRL = false;
+            // ---- START ----
+            // Arm only when you're clearly outside the "start side"
+            if (!hasStartedStroke && !triggerSteering)
             {
-                triggerSteering = true;
-                gameManager.lockPosRot = true;
+                bool insideWidth = Mathf.Abs(latO) <= halfW;
+
+                // Arm only when you're clearly outside the start side AND inside width
+                if ((isRL && p > halfL + gateTol) ||   // RL: start at +halfL
+                     (!isRL && p < -halfL - gateTol))   // LR: start at -halfL
+                {
+                    gateArmed = true;
+                }
+
+                // Start when you cross into the path AND still inside width
+                if (gateArmed && insideWidth &&
+                    ((isRL && p <= halfL - gateTol) ||
+                     (!isRL && p >= -halfL + gateTol)))
+                {
+                    triggerSteering = true;
+                    gameManager.lockPosRot = true;
+                    StartStroke();
+                }
+
+                // Optional: disarm if you leave width before starting (prevents accidental start)
+                if (!insideWidth) gateArmed = false;
             }
-                
-            //StartStroke();
 
-            if (!hasStartedStroke && tag == "Board" && triggerSteering)
-                StartStroke();
-
-
-
-            if (gameManager.isSteering && hasStartedStroke)
+            // ---- DURING STROKE ----
+            if (hasStartedStroke && gameManager.isSteering)
             {
+              
+                // FAIL if outside width at any point
+                if (Mathf.Abs(latO) > halfW)
+                {
+                    EndStroke();
+                    gameManager.EndTrial(false);
+                    gateArmed = false;
+                    return;
+                }
+
+                // END when reaching the end side
+                if ((isRL && p <= -halfL + gateTol) ||
+                    (!isRL && p >= halfL - gateTol))
+                {
+                    EndStroke();
+                    gameManager.EndTrial(true);
+                    gateArmed = false;
+                    return;
+                }
                 if (currentStroke.Count == 0 ||
                     Vector3.Distance(currentStroke[^1], surfacePos) > 0.01f)
                 {
@@ -108,14 +193,16 @@ public class RayBrush : MonoBehaviour
                 }
             }
 
-            if (hasStartedStroke && tag == "EndPoint")
-            {
-                EndStroke();
-                gameManager.EndTrial(true);
-            }
         }
         else
         {
+            if (isSteeringNow)
+            {
+                EndStroke();
+                gameManager.EndTrial(false);
+                gateArmed = false;
+                return;
+            }
             float distance;
             if (boardPlane.Raycast(ray, out distance))
                 cursorPos = ray.GetPoint(distance);
@@ -146,6 +233,13 @@ public class RayBrush : MonoBehaviour
         }
     }
 
+
+    private void GetBoardLocalProgressLateral(Vector3 worldPoint, out float progressX, out float lateralZ)
+    {
+        Vector3 local = board.transform.InverseTransformPoint(worldPoint);
+        progressX = local.x;   // task axis (LR/RL)
+        lateralZ = local.z;   // width axis on the plane
+    }
     // --- Stroke methods (unchanged) ---
     void StartStroke()
     {
@@ -181,6 +275,7 @@ public class RayBrush : MonoBehaviour
         hasStartedStroke = false;
         gameManager.isSteering = false;
         triggerSteering = false;
+        gateArmed = false;
 
         if (currentStroke.Count > 1)
         {
