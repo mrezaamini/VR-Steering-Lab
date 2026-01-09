@@ -97,8 +97,8 @@ public class VisualSizeHandler : MonoBehaviour
                 transform.localScale = targetScale;
         }
 
-       
-        
+
+
 
         // --- rest of your code (children width, endpoints positioning) stays the same ---
         float childWorldWidthTarget = childBaseVisualWidth * scaleFactor;

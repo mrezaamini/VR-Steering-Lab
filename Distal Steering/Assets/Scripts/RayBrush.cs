@@ -132,6 +132,8 @@ public class RayBrush : MonoBehaviour
             float p = Vector3.Dot(surfacePos - origin, progressAxis);
             float latO = Vector3.Dot(surfacePos - origin, lateralAxis);
 
+            
+
             float halfL = L * 0.5f;
             float halfW = W * 0.5f;
 
@@ -148,6 +150,7 @@ public class RayBrush : MonoBehaviour
                      (!isRL && p < -halfL - gateTol))   // LR: start at -halfL
                 {
                     gateArmed = true;
+                    UnityEngine.Debug.Log("<==> TRUE");
                 }
 
                 // Start when you cross into the path AND still inside width

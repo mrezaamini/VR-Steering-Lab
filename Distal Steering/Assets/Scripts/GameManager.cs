@@ -74,22 +74,22 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     private List<(int, Vector3, int)> participantTrials;
     List<Vector2> path_geometries = new List<Vector2>() // W L at reference depth is 1f!
     {
-        //new Vector3(0.0349f,0.443388f),
+        new Vector3(0.0349f,0.443388f),
         //new Vector3(0.0349f,0.535898f),
-        //new Vector3(0.0349f,0.630596f),
-        //new Vector3(0.0349f,0.932615f),
-        //new Vector3(0.0524f,0.443388f),
+        new Vector3(0.0349f,0.630596f),
+        new Vector3(0.0349f,0.932615f),
+        new Vector3(0.0524f,0.443388f),
         //new Vector3(0.0524f,0.535898f),
-        //new Vector3(0.0524f,0.630596f),
-        //new Vector3(0.0524f,0.932615f),
-        //new Vector3(0.0786f,0.443388f),
+        new Vector3(0.0524f,0.630596f),
+        new Vector3(0.0524f,0.932615f),
+        new Vector3(0.0786f,0.443388f),
         //new Vector3(0.0786f,0.535898f),
-        //new Vector3(0.0786f,0.630596f),
-        //new Vector3(0.0786f,0.932615f),
-        //new Vector3(0.1048f,0.443388f),
-        new Vector3(0.1048f,0.535898f),
-        //new Vector3(0.1048f,0.630596f),
-        //new Vector3(0.1048f,0.932615f),
+        new Vector3(0.0786f,0.630596f),
+        new Vector3(0.0786f,0.932615f),
+        new Vector3(0.1048f,0.443388f),
+        //new Vector3(0.1048f,0.535898f),
+        new Vector3(0.1048f,0.630596f),
+        new Vector3(0.1048f,0.932615f)
     };
 
     List<float> depth_list = new List<float>()
@@ -162,7 +162,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     {
         if(currentTrial >= participantTrials.Count)
         {
-            if (trialRep < 2) // 3 Rep per participant
+            if (trialRep < 4) // 5 Rep per participant
             {
                 trialRep++;
                 currentTrial = 0;
@@ -482,8 +482,8 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
                 }
                 prev = curr;
 
-                // If you want lateral deviation across width and your width axis is vertical on board:
-                float lateralVal = bz; // or bx depending on your definition
+               
+                float lateralVal = bz; 
                 lateral.Add(lateralVal);
                 float w_p = trialW * (trialD / BASE_DEPTH);
                 float l_p = trialL * (trialD / BASE_DEPTH);
