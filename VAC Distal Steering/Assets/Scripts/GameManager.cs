@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using System.Diagnostics;
+using UnityEngine.InputSystem;
 
 public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STUDY, REMEMBER TO PUT THE UPDATED VERSION BACK INTO THE SOURCE FILE!!!!!!
 {
@@ -25,9 +26,19 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     public GameObject Linear_Path;
     public VisualSizeHandler LP_VShandler;
 
+    public GameObject Circular_Path;
+    public CircularSizeHandler C_VShandler;
+    public ManageVisualCircle VC_manager;
+
     [Header("Drawing")]
     public RayBrush rayBrush;        // assign in Inspector
     public Transform boardTransform; // the board plane transform
+
+    [Header("Circle Gate Visuals")]
+    public GateAtNoon circleGate;      // drag the component here (on Circular_Path or GateRoot)
+    public Material gateRedMat;        // drag red material
+    public Material gateGreenMat;      // drag green material
+
 
     // Stroke output file
     private string strokeOutputFile;
@@ -72,24 +83,43 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     public float CurrentLengthP;
 
     private List<(int, Vector3, int, int)> participantTrials;
-    List<Vector2> path_geometries = new List<Vector2>() // W L at reference depth is 1f!
+    //List<Vector2> path_geometries = new List<Vector2>() // W L at reference depth is 1f!
+    //{
+    //    new Vector3(0.0349f,0.443388f),
+    //    //new Vector3(0.0349f,0.535898f),
+    //    new Vector3(0.0349f,0.630596f),
+    //    new Vector3(0.0349f,0.932615f),
+    //    new Vector3(0.0524f,0.443388f),
+    //    //new Vector3(0.0524f,0.535898f),
+    //    new Vector3(0.0524f,0.630596f),
+    //    new Vector3(0.0524f,0.932615f),
+    //    new Vector3(0.0786f,0.443388f),
+    //    //new Vector3(0.0786f,0.535898f),
+    //    new Vector3(0.0786f,0.630596f),
+    //    new Vector3(0.0786f,0.932615f),
+    //    new Vector3(0.1048f,0.443388f),
+    //    //new Vector3(0.1048f,0.535898f),
+    //    new Vector3(0.1048f,0.630596f),
+    //    new Vector3(0.1048f,0.932615f)
+    //};
+
+    public List<Vector2> path_ang_lwf = new List<Vector2>()
     {
-        new Vector3(0.0349f,0.443388f),
-        //new Vector3(0.0349f,0.535898f),
-        new Vector3(0.0349f,0.630596f),
-        new Vector3(0.0349f,0.932615f),
-        new Vector3(0.0524f,0.443388f),
-        //new Vector3(0.0524f,0.535898f),
-        new Vector3(0.0524f,0.630596f),
-        new Vector3(0.0524f,0.932615f),
-        new Vector3(0.0786f,0.443388f),
-        //new Vector3(0.0786f,0.535898f),
-        new Vector3(0.0786f,0.630596f),
-        new Vector3(0.0786f,0.932615f),
-        new Vector3(0.1048f,0.443388f),
-        //new Vector3(0.1048f,0.535898f),
-        new Vector3(0.1048f,0.630596f),
-        new Vector3(0.1048f,0.932615f)
+        new Vector2(2f, 25f),   // 0
+        new Vector2(2f, 35f),   // 1
+        new Vector2(2f, 50f),   // 2
+
+        new Vector2(3f, 25f),   // 3
+        new Vector2(3f, 35f),   // 4
+        new Vector2(3f, 50f),   // 5
+
+        new Vector2(4.5f, 25f), // 6
+        new Vector2(4.5f, 35f), // 7
+        new Vector2(4.5f, 50f), // 8
+
+        new Vector2(6f, 25f),   // 9
+        new Vector2(6f, 35f),   //10
+        new Vector2(6f, 50f),   //11
     };
 
     List<float> depth_list = new List<float>()
@@ -101,6 +131,10 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         2f,
         4f
     };
+
+    public int CurrentPathType => trial_path_type;
+    public int CurrentDirection => trialRotation;    // 0/1 (LR/RL or CW/CCW)
+
 
     public float getCurrentDepth()
     {
@@ -148,8 +182,11 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         if (!mainCamera) mainCamera = Camera.main; //make sure camera is attached
 
         participantTrials = GenerateParticipantTrial(participantID);
+        foreach (var (pathType, geo, rep, dir) in participantTrials)
+        {
+            UnityEngine.Debug.Log($"Path:{pathType}  W:{geo.x}  L:{geo.y}  Depth:{geo.z}  Rep:{rep}  Dir:{dir}");
+        }
 
-        LP_VShandler.referenceDistance = BASE_DEPTH;
 
         steeringSW = new Stopwatch();
         errorSW = new Stopwatch();
@@ -192,8 +229,14 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
             //trial_verification = true;
             //EndTrial();
         }
-        if (trial_path_type == 1)
-            LP_VShandler.lockPositionAndRotation = lockPosRot;
+        //debug only
+        if (Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame)
+        {
+            UnityEngine.Debug.Log("SPACE PRESSED");
+            currentTrial++;
+            NextTrial();
+        }
+
     }
 
 
@@ -216,44 +259,103 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         }
 
         (int path_type, Vector3 path_geo, int trialRepNum,int path_dir) = participantTrials[currentTrial];
-        float base_width = path_geo.x;
-        float base_len = path_geo.y;
+        float ang_width = path_geo.x;
+        float ang_len = path_geo.y;
         float desired_depth = path_geo.z;
 
         switch (path_type)
         {
-            case 1:
-                LP_VShandler.baseSize.x = base_len;
-                LP_VShandler.baseSize.y = base_width;
-                LP_VShandler.desiredDistance = desired_depth;
-                LP_VShandler.pathDirection = path_dir;
-                LP_VShandler.referenceDistance = 1;
-                trial_path_type = 1;
-                trial_path = Linear_Path;
-                // = true;
+            //case 1:
+            //    LP_VShandler.baseSize.x = base_len;
+            //    LP_VShandler.baseSize.y = base_width;
+            //    LP_VShandler.desiredDistance = desired_depth;
+            //    LP_VShandler.pathDirection = path_dir;
+            //    LP_VShandler.referenceDistance = 1;
+            //    trial_path_type = 1;
+            //    trial_path = Linear_Path;
+            //    // = true;
+            //    break;
+            case 2:
+                UnityEngine.Debug.Log("OBJ "+path_type);
+                VC_manager.SetVisual(ang_width, ang_len);
+                VC_manager.setScale(desired_depth);
+                UnityEngine.Debug.Log("OBJ CREATED!");
+                
+                C_VShandler.desiredDistance = desired_depth;
+                C_VShandler.circleDirection = path_dir; // 0=CW, 1=CCW
+                C_VShandler.path_length = ang_len;
+                C_VShandler.referenceDistance = 1;
+                trial_path_type = 2;
+                trial_path = Circular_Path;
                 break;
-            default: UnityEngine.Debug.Log("Invalid Path Type!"); break;
+
+            case 3:
+                // placeholder — we’ll implement sine later
+                trial_path_type = 3;
+                // trial_path = Sine_Path;
+                break;
+
+            default:
+                UnityEngine.Debug.Log("Invalid Path Type!");
+                break;
+            
         }
 
         trial_path.SetActive(true);
+        // Assign boardTransform for the current path ---
+        Transform boardChild = trial_path.transform.Find("BoardColliderMesh");
+        if (boardChild != null)
+        {
+            boardTransform = boardChild;
 
-   
+            // Update RayBrush's board reference (cursor + plane fallback uses this)
+            if (rayBrush != null) rayBrush.board = boardChild.gameObject;
+        }
+        else
+        {
+            UnityEngine.Debug.LogWarning($"BoardColliderMesh not found under {trial_path.name}. " +
+                                         $"Create a child named 'BoardColliderMesh' with tag Board and on boardLayer.");
+        }
+
+
 
         //update trial info:
         trial_verification = false;
-        trialL = base_len;
-        trialW = base_width;
+        trialL = ang_len;
+        trialW = ang_width;
         trialD = desired_depth;
         trialRotation = path_dir;
         trialRep = trialRepNum;
 
         CurrentWidthP = trialW * (trialD / BASE_DEPTH);
         CurrentLengthP = trialL * (trialD / BASE_DEPTH);
+        //if (trial_path_type == 2 && circleGate != null)
+        //{
+        //    float R = CurrentLengthP / (2f * Mathf.PI); // circumference -> radius
+        //    float depthScale = trialD / BASE_DEPTH;
+
+        //    // Ensure reference points to this trial ring
+        //    var ring = trial_path.transform.Find("RingVisual");
+        //    if (ring != null) circleGate.ringVisual = ring;
+
+        //    circleGate.UpdateGate(R, CurrentWidthP, depthScale);
+        //}
+
+
+
 
         trialTotalDistance = 0;
         trialStrokeN = 0;
         trialLateralMean = float.NaN;
         trialLateralSD = float.NaN;
+
+
+        if (trial_path_type == 2 && circleGate != null)
+        {
+            circleGate.UpdateGate(trialW,trialD,trialRotation);
+        }
+
+        
     }
 
 
@@ -263,15 +365,20 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         List<(int, Vector3, int, int)> trials = new List<(int, Vector3, int, int)>();
         System.Random rng = new System.Random(PID);
         List<(Vector3 position, int repetition)> path_conditions =
-        combine_path_geo(path_geometries, depth_list, PID);
+        combine_path_geo(path_ang_lwf, depth_list, PID);
 
         foreach (var (position, repetition) in path_conditions)
         {
             int first = rng.Next(2);   // 0 or 1
             int second = 1 - first;    // ensures both values appear
 
-            trials.Add((1, position, repetition, first));
-            trials.Add((1, position, repetition, second));
+            //circular
+            trials.Add((2, position, repetition, first));
+            trials.Add((2, position, repetition, second));
+
+            //sine wave
+            //trials.Add((3, position, repetition, first));
+            //trials.Add((3, position, repetition, second));
         }
 
         return trials;
@@ -495,33 +602,9 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
                 float by = wp.y;
                 float bz = wp.z;
 
-                //if (boardTransform != null)
-                //{
-                //    Vector3 local = boardTransform.InverseTransformPoint(wp);
-                //    if (rotation == 1)
-                //    {
-                //        local.x = -local.x;
-                //        //local.z = -local.z; //rotate based on direction
-                //    }
-
-                //    float mx = local.x * boardTransform.lossyScale.x;
-                //    float mz = local.z * boardTransform.lossyScale.z;
-                //    mx *= 10f;
-                //    mz *= 10f;
-
-                //    //bx = local.x;
-                //    bx = mx;
-                //    by = local.y;
-                //    //bz = local.z;
-                //    bz = mz;
-
-                //    float lateralVal = mz;  // <-- lateral freedom axes
-                //    lateral.Add(lateralVal);
-                //}
                 Vector3 b = WorldToBoardMeters_DirInvariant(boardTransform, Camera.main.transform, wp, boardTransform.right);
 
 
-                // If you want LR and RL to have the same progress direction:
                 if (rotation == 1) //RL
                 {
                     b.x = -b.x;     // flip only task axis
@@ -537,8 +620,25 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
                 }
                 prev = curr;
 
-               
-                float lateralVal = bz; 
+
+                float lateralVal;
+
+                if (trial_path_type == 2)
+                {
+                    // circle: lateral is radial deviation from centerline
+                    float Lp = CurrentLengthP; // circumference physical
+                    float R = Lp / (2f * Mathf.PI);
+
+                    // bx,bz are board-plane coords (meters), so radius in plane:
+                    float r = Mathf.Sqrt(bx * bx + bz * bz);
+                    lateralVal = (r - R);
+                }
+                else
+                {
+                    // linear (current behavior)
+                    lateralVal = bz;
+                }
+
                 lateral.Add(lateralVal);
                 float w_p = trialW * (trialD / BASE_DEPTH);
                 float l_p = trialL * (trialD / BASE_DEPTH);
