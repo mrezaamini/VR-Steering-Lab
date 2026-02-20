@@ -32,6 +32,7 @@ public class RayBrush : MonoBehaviour
     private GameObject cursorInstance;
     private LineRenderer currentLine;
     private readonly List<Vector3> currentStroke = new();
+    private readonly List<float> currentDeviationList = new();
     private readonly List<List<Vector3>> allStrokes = new();
     private GameManager gameManager;
 
@@ -44,6 +45,41 @@ public class RayBrush : MonoBehaviour
     private bool gateArmed = false;
 
     public List<Vector3> LastStroke { get; private set; } = new List<Vector3>();
+
+    public List<float> LastDeviationList { get; private set; } = new List<float>();
+
+    // Progress state
+    private bool hasPrevP = false;
+    private float prevP = 0f;
+
+    // Start-zone hysteresis + lap completion
+    private bool leftStartZone = false;   // have we been outside the start zone since last crossing?
+    private float forwardAccum = 0f;       // unwrapped forward distance since start
+
+
+    [SerializeField] bool drawStrokeGizmos = false;
+    [SerializeField] float gizmoPointSize = 0.006f;
+
+
+    void OnDrawGizmos()
+    {
+        if (!drawStrokeGizmos) return;
+        if (currentStroke == null || currentStroke.Count == 0) return;
+
+        // Draw points
+        Gizmos.color = Color.magenta;
+        foreach (var p in currentStroke)
+        {
+            Gizmos.DrawSphere(p, gizmoPointSize);
+        }
+
+        // Draw connecting lines
+        Gizmos.color = Color.yellow;
+        for (int i = 1; i < currentStroke.Count; i++)
+        {
+            Gizmos.DrawLine(currentStroke[i - 1], currentStroke[i]);
+        }
+    }
 
     void Start()
     {
@@ -95,17 +131,22 @@ public class RayBrush : MonoBehaviour
     {
         if (board == null || gameManager == null) return;
 
+        
+
         bool isSteeringNow = (hasStartedStroke && gameManager.isSteering);
 
         Ray ray = new Ray(controller.position, controller.forward);
         RaycastHit hit;
         Vector3 cursorPos;
+        
 
         // Plane fallback (for cursor when no hit)
         Plane boardPlane = new Plane(board.transform.up, board.transform.position);
+        Debug.DrawRay(ray.origin, ray.direction * rayLength, Color.magenta, 0.02f);
 
         if (Physics.Raycast(ray, out hit, rayLength, boardLayer))
         {
+            
             Vector3 surfacePos = hit.point + hit.normal * strokeSurfaceOffset;
             cursorPos = surfacePos;
 
@@ -117,6 +158,8 @@ public class RayBrush : MonoBehaviour
 
             int pathType = gameManager.CurrentPathType;   // 1=linear, 2=circle, 3=sine (later)
             int dir = gameManager.CurrentDirection;       // 0/1 (for linear LR/RL; for circle CW/CCW)
+
+            
 
             if (pathType == 1)
             {
@@ -134,6 +177,7 @@ public class RayBrush : MonoBehaviour
         }
         else
         {
+
             // If we lose intersection during steering -> fail (same rule as your linear)
             if (isSteeringNow)
             {
@@ -206,7 +250,7 @@ public class RayBrush : MonoBehaviour
                 ((isRL && p <= halfL - gateTol) || (!isRL && p >= -halfL + gateTol)))
             {
                 triggerSteering = true;
-                gameManager.lockPosRot = true;
+                
                 StartStroke();
             }
 
@@ -233,92 +277,198 @@ public class RayBrush : MonoBehaviour
             }
 
             if (currentStroke.Count == 0 || Vector3.Distance(currentStroke[^1], surfacePos) > 0.01f)
+            {
+                gameManager.lockPosRot = true;
                 AddPoint(surfacePos);
+            }
+                
         }
     }
 
     // =========================
-    // CIRCLE (temporary simple version)
-    // Start: inside width, must first move "away" from gate then come back near gate.
-    // End: progress reaches ~L
-    // (We’ll replace with your 12 o’clock red/green gate crossing logic next.)
+    // CIRCLE
+    // Start: inside width, must first move "away" from gate then come back near gate
     // =========================
     private void HandleCircle(Vector3 surfacePos, Transform bt, float L, float W, int dir)
     {
+        
         GetCircleProgressLateral(surfacePos, bt, L, dir, out float p, out float latO);
 
         float halfW = W * 0.5f;
 
-        float startTol = Mathf.Max(0.02f * L, 0.01f); // 2% circumference or 1cm
-        float awayTol = Mathf.Max(0.10f * L, 0.05f); // 10% or 5cm
+        // ---- Tolerances ----
+        float startTol = Mathf.Max(0.02f * L, 0.01f);   // 2% or 1cm
+        float endTol = Mathf.Max(0.02f * L, 0.01f);
+
+        //float startTol = 0.1f;
+
+
+        // Hysteresis around start zone: you must LEAVE a slightly bigger zone before you can trigger again.
+        // preventin jitter
+        float leaveTol = startTol * 2f;                 // e.g., leave beyond 2*startTol
 
         bool insideWidth = Mathf.Abs(latO) <= halfW;
 
-        // ---- START ----
+        // ---- Wrapped delta progress (dp) ----
+        float dp = 0f;
+        bool movingForward = false;
+        bool haveDp = false;
+
+        float prevP_local = prevP; // capture previous before updating
+
+
+        //if (Time.frameCount % 15 == 0)
+        //{
+           
+        //    Debug.Log($"[Circle] p={p:F3}/{L:F3} latO={latO:F4} |latO|<={halfW:F4}? {insideWidth} W={W:F3}");
+        //}
+
+        if (hasPrevP)
+        {
+            dp = p - prevP_local;
+
+            // wrap correction: keep dp in (-L/2, +L/2]
+            if (dp > L * 0.5f) dp -= L;
+            if (dp < -L * 0.5f) dp += L;
+
+            // ignore tiny jitter
+            movingForward = dp > 0.0005f; // 0.5mm
+            haveDp = true;
+        }
+
+        prevP = p;
+        hasPrevP = true;
+
+        bool inStartZone = (p <= startTol);
+        bool outStartZone = (p >= leaveTol);
+
+        // Track whether they've left the start region (hysteresis)
+        if (outStartZone) leftStartZone = true;
+
+        // "Passed start in correct direction" event:
+        // Only count it if:
+        // - they were outside start zone before (leftStartZone == true)
+        // - now they are in the start zone
+        // - and motion is forward (according to dp)
+        bool crossedStartForward = leftStartZone && inStartZone && haveDp && movingForward;
+
+        // --------------------
+        // START
+        // --------------------
         if (!hasStartedStroke && !triggerSteering)
         {
-            if (insideWidth && p > awayTol) gateArmed = true;
+            // Do not start unless they're valid (within width)
+            if (!insideWidth)
+            {
+                // If they leave the corridor while waiting, reset hysteresis so they must leave+re-enter cleanly.
+                leftStartZone = false;
+                return;
+            }
 
-            if (gateArmed && insideWidth && p <= startTol)
+           
+
+            // Start ONLY on a forward crossing of the start gate (with hysteresis)
+            if (crossedStartForward)
             {
                 triggerSteering = true;
+                gameManager.lockPosRot = true;
+
+                forwardAccum = 0f;       // start counting forward distance from the real start crossing
+                leftStartZone = false;   // so we don't instantly re-trigger at the seam
                 gameManager.lockPosRot = true;
                 StartStroke();
             }
 
-            if (!insideWidth) gateArmed = false;
+            return;
         }
 
-        // ---- DURING ----
+        // --------------------
+        // DURING
+        // --------------------
         if (hasStartedStroke && gameManager.isSteering)
         {
-            if (Mathf.Abs(latO) > halfW)
+            // Fail if outside corridor
+            if (!insideWidth)
             {
                 EndStroke();
                 gameManager.EndTrial(false);
-                gateArmed = false;
+                leftStartZone = false;
                 return;
             }
 
-            float endTol = Mathf.Max(0.02f * L, 0.01f);
-            if (p >= L - endTol)
+            // Accumulate only forward movement (unwrapped)
+            if (haveDp && dp > 0f)
+                forwardAccum += dp;
+
+            // Finish rule:
+            // 1) they must have accumulated ~one circumference worth of forward travel
+            // 2) then they must pass the start gate forward again
+            bool enoughProgress = forwardAccum >= (L - endTol);
+
+            if (enoughProgress && crossedStartForward)
             {
                 EndStroke();
                 gameManager.EndTrial(true);
-                gateArmed = false;
+                leftStartZone = false;
                 return;
             }
 
+            // Record points (within width is enough; no extra center constraint)
             if (currentStroke.Count == 0 || Vector3.Distance(currentStroke[^1], surfacePos) > 0.01f)
+            {
                 AddPoint(surfacePos);
+                AddDeviation(latO);
+            }
+                
         }
     }
 
     // Circle metric: progress along circumference, lateral = radial deviation from centerline
     private void GetCircleProgressLateral(
-        Vector3 worldPoint,
-        Transform bt,
-        float L_phys,     // circumference (meters)
-        int dir,          // 0=CW, 1=CCW
-        out float progress,
-        out float lateral)
+    Vector3 worldPoint,
+    Transform bt,
+    float L_phys,     // circumference (meters)
+    int dir,          // 0=CW, 1=CCW
+    out float progress,
+    out float lateral)
     {
+       
         Vector3 origin = bt.position;
-        Vector3 xAxis = bt.right.normalized;
-        Vector3 zAxis = bt.forward.normalized;
+        Debug.DrawRay(origin, Vector3.up * 0.2f, Color.green, 0.02f);
+        Debug.DrawRay(origin, Vector3.right * 0.2f, Color.red, 0.02f);
+        // For a whiteboard (vertical plane), the in-plane axes are RIGHT (horizontal) and UP (vertical)
+        //Vector3 xAxis = bt.right.normalized; // horizontal on board
+        //Vector3 yAxis = bt.up.normalized;    // vertical on board
 
+        Debug.DrawLine(origin, origin + Vector3.right * 0.25f, Color.red, 0.02f);   // X
+        Debug.DrawLine(origin, origin + Vector3.up * 0.25f, Color.green, 0.02f); // Y
+
+        Vector3 xAxis = Vector3.right;
+        Vector3 yAxis = Vector3.up;
+
+
+        // Coordinates in board plane
         float x = Vector3.Dot(worldPoint - origin, xAxis);
-        float z = Vector3.Dot(worldPoint - origin, zAxis);
+        float y = Vector3.Dot(worldPoint - origin, yAxis);
 
         float R = L_phys / (2f * Mathf.PI);
-        float r = Mathf.Sqrt(x * x + z * z);
+        float r = Mathf.Sqrt(x * x + y * y);
+
+        // radial deviation from ideal ring radius
         lateral = (r - R);
 
-        float theta = Mathf.Atan2(z, x);
+        // angle around the ring in the board plane
+        float theta = Mathf.Atan2(y, x);
         if (theta < 0f) theta += 2f * Mathf.PI;
 
-        float startTheta = 0f; // +X axis
+        const float startTheta = 0.5f * Mathf.PI; // 12 o'clock
         float dTheta;
+
+        if (Time.frameCount % 30 == 0)
+            Debug.Log($"startTheta(rad)={startTheta:F4} deg={startTheta * Mathf.Rad2Deg:F1}");
+
+        Vector3 startDir = Mathf.Cos(startTheta) * xAxis + Mathf.Sin(startTheta) * yAxis;
+        Debug.DrawLine(origin, origin + startDir * 0.3f, Color.yellow, 0.02f);
 
         bool isCCW = (dir == 1);
 
@@ -327,13 +477,26 @@ public class RayBrush : MonoBehaviour
             dTheta = theta - startTheta;
             if (dTheta < 0f) dTheta += 2f * Mathf.PI;
         }
-        else
+        else // CW
         {
             dTheta = startTheta - theta;
             if (dTheta < 0f) dTheta += 2f * Mathf.PI;
         }
 
+        // arc-length progress in meters [0, L)
         progress = dTheta * R;
+
+
+        //if (Time.frameCount % 30 == 0)
+        //{
+        //    Debug.Log(
+        //        $"[CircleDBG] L={L_phys:F4} R={(L_phys / (2f * Mathf.PI)):F4} " +
+        //        $"origin={origin} " +
+        //        $"x={x:F4} y={y:F4} r={r:F4} lat={lateral:F4} " +
+        //        $"theta={theta:F4} dTheta={dTheta:F4} prog={progress:F4} " +
+        //        $"bt.right={xAxis} bt.up={yAxis}"
+        //    );
+        //}
     }
 
     // Kept (may be useful later)
@@ -349,6 +512,7 @@ public class RayBrush : MonoBehaviour
     // =========================
     void StartStroke()
     {
+        
         hasStartedStroke = true;
         gameManager.OnStartTraversing();
 
@@ -357,6 +521,8 @@ public class RayBrush : MonoBehaviour
 
         currentStroke.Clear();
         LastStroke.Clear();
+        currentDeviationList.Clear();
+        LastDeviationList.Clear();
 
         float dist = GetHeadToBoardDistance();
         if (referenceDistance <= 1e-4f) referenceDistance = 1.0f;
@@ -373,6 +539,11 @@ public class RayBrush : MonoBehaviour
         currentLine.SetPositions(currentStroke.ToArray());
     }
 
+    void AddDeviation(float newVal)
+    {
+        currentDeviationList.Add(newVal);
+    }
+
     void EndStroke()
     {
         hasStartedStroke = false;
@@ -384,6 +555,7 @@ public class RayBrush : MonoBehaviour
         {
             allStrokes.Add(new List<Vector3>(currentStroke));
             LastStroke = new List<Vector3>(currentStroke);
+            LastDeviationList = new List<float>(currentDeviationList);
         }
 
         if (currentLine != null)

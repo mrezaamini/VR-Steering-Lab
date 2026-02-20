@@ -251,13 +251,15 @@ public class CircularSizeHandler : MonoBehaviour
     private bool ringCalibrated = false;
     public float path_length = 1f;
 
+    public GameManager gameManager;
+
     void Start()
     {
         if (!headTransform && Camera.main != null)
             headTransform = Camera.main.transform;
+        
 
 
-       
 
         if (!boardCollider)
         {
@@ -289,8 +291,9 @@ public class CircularSizeHandler : MonoBehaviour
         Quaternion targetRot = Quaternion.LookRotation(-Vector3.up, Vector3.forward);
 
         // Visual-angle constant scaling: sizes grow linearly with distance
-        
 
+        
+        lockPositionAndRotation = gameManager.lockPosRot;
         if (!lockPositionAndRotation)
         {
             if (smoothFollow)

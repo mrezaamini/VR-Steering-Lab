@@ -182,10 +182,10 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         if (!mainCamera) mainCamera = Camera.main; //make sure camera is attached
 
         participantTrials = GenerateParticipantTrial(participantID);
-        foreach (var (pathType, geo, rep, dir) in participantTrials)
-        {
-            UnityEngine.Debug.Log($"Path:{pathType}  W:{geo.x}  L:{geo.y}  Depth:{geo.z}  Rep:{rep}  Dir:{dir}");
-        }
+        //foreach (var (pathType, geo, rep, dir) in participantTrials)
+        //{
+        //    UnityEngine.Debug.Log($"Path:{pathType}  W:{geo.x}  L:{geo.y}  Depth:{geo.z}  Rep:{rep}  Dir:{dir}");
+        //}
 
 
         steeringSW = new Stopwatch();
@@ -244,7 +244,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     {
         if(currentTrial >= participantTrials.Count)
         {
-            //if (trialRep < 4) // 5 Rep per participant
+            //if (trialRep < 2) // 5 Rep per participant
             //{
             //    trialRep++;
             //    currentTrial = 0;
@@ -327,21 +327,11 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         trialRotation = path_dir;
         trialRep = trialRepNum;
 
-        CurrentWidthP = trialW * (trialD / BASE_DEPTH);
-        CurrentLengthP = trialL * (trialD / BASE_DEPTH);
-        //if (trial_path_type == 2 && circleGate != null)
-        //{
-        //    float R = CurrentLengthP / (2f * Mathf.PI); // circumference -> radius
-        //    float depthScale = trialD / BASE_DEPTH;
+        //CurrentWidthP = trialW * (trialD / BASE_DEPTH); 
+        //CurrentLengthP = trialL * (trialD / BASE_DEPTH); 
 
-        //    // Ensure reference points to this trial ring
-        //    var ring = trial_path.transform.Find("RingVisual");
-        //    if (ring != null) circleGate.ringVisual = ring;
-
-        //    circleGate.UpdateGate(R, CurrentWidthP, depthScale);
-        //}
-
-
+        CurrentWidthP = getPhysicalWidth(trialW, trialD);
+        CurrentLengthP = getPhysicalLen(trialL, trialD);
 
 
         trialTotalDistance = 0;
@@ -356,6 +346,59 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         }
 
         
+    }
+
+    public float getPhysicalWidth (float W, float D)
+    {
+        float w_p = 0f;
+
+        switch (W)
+        {
+            case 2:
+                w_p=0.0349f;
+                break;
+            case 3:
+                w_p = 0.0524f;
+                break;
+            case 4.5f:
+                w_p = 0.0786f;
+                break;
+            case 6:
+                w_p = 0.1048f;
+                break;
+            default:
+                UnityEngine.Debug.LogError("Get Physical Width: wrong W input!");
+                break;
+        }
+
+        float s = D / BASE_DEPTH;
+        w_p = w_p * s;
+        return w_p;
+    }
+
+    public float getPhysicalLen(float L, float D)
+    {
+        float l_p = 0f;
+
+        switch (L)
+        {
+            case 25:
+                l_p = 0.443388f;
+                break;
+            case 35:
+                l_p = 0.630596f;
+                break;
+            case 50:
+                l_p = 0.932615f;
+                break;
+            default:
+                UnityEngine.Debug.LogError("Get Physical Len: wrong L input!");
+                break;
+        }
+
+        float s = D / BASE_DEPTH;
+        l_p = l_p * s;
+        return l_p;
     }
 
 
@@ -405,7 +448,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         {
             float f = depths[(start + di) % n];
 
-            for (int ci = 0; ci < 5; ci++)
+            for (int ci = 0; ci < 3; ci++) //3reps
             {
                 foreach (var v2 in path_lw)
                 {
@@ -474,7 +517,8 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
                     trialL,
                     trialD,
                     trialRotation,
-                    rayBrush.LastStroke
+                    rayBrush.LastStroke,
+                    rayBrush.LastDeviationList
                 );
             }
 
@@ -489,15 +533,9 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         }
 
         trial_path.SetActive(false);
-        if (trial_path_type == 1)
-        {
-            lockPosRot = false;
-        }
-
-       
-
-
-
+        
+        lockPosRot = false;
+        
         //stoping and saving timers
         steeringSW.Stop();
         SteeringTime_trial = steeringSW.Elapsed.TotalMilliseconds;
@@ -582,7 +620,8 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     float length,
     float depth,
     int rotation,
-    List<Vector3> worldPoints)
+    List<Vector3> worldPoints,
+    List<float> curveLateralDeviationList)
     {
         if (boardTransform == null)
         {
@@ -621,27 +660,13 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
                 prev = curr;
 
 
-                float lateralVal;
+                float lateralVal = bz;
+                
 
-                if (trial_path_type == 2)
-                {
-                    // circle: lateral is radial deviation from centerline
-                    float Lp = CurrentLengthP; // circumference physical
-                    float R = Lp / (2f * Mathf.PI);
-
-                    // bx,bz are board-plane coords (meters), so radius in plane:
-                    float r = Mathf.Sqrt(bx * bx + bz * bz);
-                    lateralVal = (r - R);
-                }
-                else
-                {
-                    // linear (current behavior)
-                    lateralVal = bz;
-                }
-
-                lateral.Add(lateralVal);
-                float w_p = trialW * (trialD / BASE_DEPTH);
-                float l_p = trialL * (trialD / BASE_DEPTH);
+                if(trial_path_type==1)
+                    lateral.Add(lateralVal);
+                float w_p = getPhysicalWidth(trialW,trialD);
+                float l_p = getPhysicalLen(trialL,trialD);
                 writer.WriteLine(
                     $"{participantID}," +
                     $"{width}," +
@@ -657,7 +682,17 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
                 );
             }
         }
+
+        if (trial_path_type == 2)
+        {
+            //lateral sdx calculation based on center line for circle
+            for(int i = 0; i < curveLateralDeviationList.Count; i++)
+            {
+                lateral.Add(curveLateralDeviationList[i]);
+            }
+        } 
         trialTotalDistance = totalDist;
+        UnityEngine.Debug.Log("TOTAL DIST:" + totalDist);
         trialStrokeN = lateral.Count;
         if (trialStrokeN > 1)
         {
@@ -743,18 +778,10 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
         float Ae_A = MetersToVisualAngleDeg(trialTotalDistance, trialD);
 
-        if(Ae_A < GetAngularLength(trialL))
-        {
-            Ae_A = GetAngularLength(trialL);
-        }
-        if (trialTotalDistance < CurrentLengthP)
-        {
-            trialTotalDistance = CurrentLengthP;
-        }
 
 
         //calculate angular size of the path
-        string newData = $"{participantID},{isMale},{isRightHanded},{trialW},{trialL},{trialD},{GetPathRotationName(trialRotation)},{trial_path_type},{CurrentWidthP},{CurrentLengthP},{GetAngularWidth(trialW)},{GetAngularLength(trialL)},{trialRep},{trial_verification},{SteeringTime_trial},{trialStrokeN},{trialLateralMean},{trialLateralSD},{meanA},{sdA},{trialTotalDistance},{Ae_A}";
+        string newData = $"{participantID},{isMale},{isRightHanded},{trialW},{trialL},{trialD},{GetPathRotationName(trialRotation)},{trial_path_type},{CurrentWidthP},{CurrentLengthP},{trialW},{trialL},{trialRep},{trial_verification},{SteeringTime_trial},{trialStrokeN},{trialLateralMean},{trialLateralSD},{meanA},{sdA},{trialTotalDistance},{Ae_A}";
         using (StreamWriter writer = new StreamWriter(steeringInfoOutputFile, true))
         {
             writer.WriteLine(newData);
