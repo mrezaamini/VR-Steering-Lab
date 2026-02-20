@@ -30,6 +30,9 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     public CircularSizeHandler C_VShandler;
     public ManageVisualCircle VC_manager;
 
+    public GameObject Sine_Path;
+    public SineVisualSizeHandler S_VShandler;
+
     [Header("Drawing")]
     public RayBrush rayBrush;        // assign in Inspector
     public Transform boardTransform; // the board plane transform
@@ -202,7 +205,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         {
             using (var writer = new StreamWriter(strokeOutputFile, true))
             {
-                writer.WriteLine("PID,Width,Length,Depth,Width_P,Length_P,Rotation,Rep,PointIndex,BoardX,BoardY,BoardZ,WorldX,WorldY,WorldZ");
+                writer.WriteLine("PID,PathType,Width,Length,Depth,Width_P,Length_P,Rotation,Rep,PointIndex,BoardX,BoardY,BoardZ,WorldX,WorldY,WorldZ");
             }
         }
 
@@ -276,23 +279,41 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
             //    // = true;
             //    break;
             case 2:
-                UnityEngine.Debug.Log("OBJ "+path_type);
                 VC_manager.SetVisual(ang_width, ang_len);
                 VC_manager.setScale(desired_depth);
-                UnityEngine.Debug.Log("OBJ CREATED!");
-                
                 C_VShandler.desiredDistance = desired_depth;
                 C_VShandler.circleDirection = path_dir; // 0=CW, 1=CCW
                 C_VShandler.path_length = ang_len;
                 C_VShandler.referenceDistance = 1;
                 trial_path_type = 2;
                 trial_path = Circular_Path;
+                trial_path.SetActive(true);
                 break;
 
             case 3:
-                // placeholder — we’ll implement sine later
                 trial_path_type = 3;
-                // trial_path = Sine_Path;
+                trial_path = Sine_Path;
+                // set placement distance
+                S_VShandler.desiredDistance = desired_depth;
+                float depthScale = desired_depth / 1f;
+                // choose constants at 1m
+                float A_base = 0.035f;
+                float lambda_base = 0.25f;
+
+                float A_phys = A_base * depthScale;
+                float lambda_phys = lambda_base * depthScale;
+                trial_path.SetActive(true);
+                // generate mesh (once per trial)
+                var sineGen = trial_path.GetComponentInChildren<SineBandGenerator>();
+                sineGen.direction = path_dir;
+
+                sineGen.SetByCenterlineLength(
+                    getPhysicalLen(ang_len, desired_depth),
+                    getPhysicalWidth(ang_width, desired_depth),
+                    A_phys,
+                    lambda_phys
+                );
+
                 break;
 
             default:
@@ -301,7 +322,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
             
         }
 
-        trial_path.SetActive(true);
+        
         // Assign boardTransform for the current path ---
         Transform boardChild = trial_path.transform.Find("BoardColliderMesh");
         if (boardChild != null)
@@ -392,7 +413,7 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
                 l_p = 0.932615f;
                 break;
             default:
-                UnityEngine.Debug.LogError("Get Physical Len: wrong L input!");
+                UnityEngine.Debug.LogError("Get Physical Len: wrong L input! ");
                 break;
         }
 
@@ -416,12 +437,12 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
             int second = 1 - first;    // ensures both values appear
 
             //circular
-            trials.Add((2, position, repetition, first));
-            trials.Add((2, position, repetition, second));
+            //trials.Add((2, position, repetition, first));
+            //trials.Add((2, position, repetition, second));
 
             //sine wave
-            //trials.Add((3, position, repetition, first));
-            //trials.Add((3, position, repetition, second));
+            trials.Add((2, position, repetition, first));
+            trials.Add((3, position, repetition, second));
         }
 
         return trials;
@@ -613,62 +634,71 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         }
     }
 
+    private static float SampleVariance(List<float> v)
+    {
+        int n = v.Count;
+        if (n < 2) return 0f;
+
+        float mean = 0f;
+        for (int i = 0; i < n; i++) mean += v[i];
+        mean /= n;
+
+        float ss = 0f;
+        for (int i = 0; i < n; i++)
+        {
+            float d = v[i] - mean;
+            ss += d * d;
+        }
+        return ss / (n - 1);
+    }
 
     private void SaveStrokeForCurrentTrial(
-    int rep,
-    float width,
-    float length,
-    float depth,
-    int rotation,
-    List<Vector3> worldPoints,
-    List<float> curveLateralDeviationList)
+        int rep,
+        float width,
+        float length,
+        float depth,
+        int rotation,
+        List<Vector3> worldPoints,
+        List<float> curveLateralDeviationList)
     {
         if (boardTransform == null)
         {
             UnityEngine.Debug.LogWarning("Board transform not set; saving world coords only.");
+            return;
         }
-        List<float> lateral = new List<float>();
-        float totalDist = 0f;
-        Vector2? prev = null;
+
+        // --- Collect board-space points + write CSV ---
+        var boardPts = new List<Vector3>(worldPoints.Count);
+
+        float w_p = getPhysicalWidth(trialW, trialD);
+        float l_p = getPhysicalLen(trialL, trialD);
+
         using (var writer = new StreamWriter(strokeOutputFile, true))
         {
             for (int i = 0; i < worldPoints.Count; i++)
             {
                 Vector3 wp = worldPoints[i];
 
-                // Project into board's local space (so X/Y are in board coordinates)
-                float bx = wp.x;
-                float by = wp.y;
-                float bz = wp.z;
+                Vector3 b = WorldToBoardMeters_DirInvariant(
+                    boardTransform,
+                    Camera.main.transform,
+                    wp,
+                    boardTransform.right
+                );
 
-                Vector3 b = WorldToBoardMeters_DirInvariant(boardTransform, Camera.main.transform, wp, boardTransform.right);
+                // Make LR/RL direction invariant (flip task axis only)
+                if (rotation == 1) b.x = -b.x;
 
+                // NOTE: you previously negated z; keep it if you want the same sign convention as before
+                float bx = b.x;
+                float by = b.y;
+                float bz = -b.z;
 
-                if (rotation == 1) //RL
-                {
-                    b.x = -b.x;     // flip only task axis
-                }
-                bx = b.x;  
-                by = b.y;  
-                bz = -b.z;
+                boardPts.Add(new Vector3(bx, by, bz));
 
-                Vector2 curr = new Vector2(bx, bz); 
-                if (prev.HasValue)
-                {
-                    totalDist += Vector2.Distance(prev.Value, curr);
-                }
-                prev = curr;
-
-
-                float lateralVal = bz;
-                
-
-                if(trial_path_type==1)
-                    lateral.Add(lateralVal);
-                float w_p = getPhysicalWidth(trialW,trialD);
-                float l_p = getPhysicalLen(trialL,trialD);
                 writer.WriteLine(
                     $"{participantID}," +
+                    $"{trial_path_type},"+
                     $"{width}," +
                     $"{length}," +
                     $"{depth}," +
@@ -683,21 +713,72 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
             }
         }
 
-        if (trial_path_type == 2)
+        // --- Ae: choose the two in-plane axes automatically (largest variance) ---
+        var xs = new List<float>(boardPts.Count);
+        var ys = new List<float>(boardPts.Count);
+        var zs = new List<float>(boardPts.Count);
+        for (int i = 0; i < boardPts.Count; i++)
         {
-            //lateral sdx calculation based on center line for circle
-            for(int i = 0; i < curveLateralDeviationList.Count; i++)
-            {
-                lateral.Add(curveLateralDeviationList[i]);
-            }
-        } 
+            xs.Add(boardPts[i].x);
+            ys.Add(boardPts[i].y);
+            zs.Add(boardPts[i].z);
+        }
+
+        float varX = SampleVariance(xs);
+        float varY = SampleVariance(ys);
+        float varZ = SampleVariance(zs);
+
+        // axis indices: 0=x, 1=y, 2=z
+        float[] vars = { varX, varY, varZ };
+        int a0 = 0, a1 = 1, a2 = 2;
+
+        // sort indices by variance descending (a0 highest, a1 second)
+        if (vars[a1] > vars[a0]) (a0, a1) = (a1, a0);
+        if (vars[a2] > vars[a0]) (a0, a2) = (a2, a0);
+        if (vars[a2] > vars[a1]) (a1, a2) = (a2, a1);
+
+        float totalDist = 0f;
+        Vector2? prev2 = null;
+
+        for (int i = 0; i < boardPts.Count; i++)
+        {
+            Vector3 v = boardPts[i];
+            float c0 = (a0 == 0) ? v.x : (a0 == 1) ? v.y : v.z;
+            float c1 = (a1 == 0) ? v.x : (a1 == 1) ? v.y : v.z;
+
+            Vector2 curr2 = new Vector2(c0, c1);
+            if (prev2.HasValue) totalDist += Vector2.Distance(prev2.Value, curr2);
+            prev2 = curr2;
+        }
+
         trialTotalDistance = totalDist;
-        UnityEngine.Debug.Log("TOTAL DIST:" + totalDist);
+        UnityEngine.Debug.Log($"TOTAL DIST (Ae): {totalDist:F4} m | plane axes = {(a0 == 0 ? "X" : a0 == 1 ? "Y" : "Z")}{(a1 == 0 ? "X" : a1 == 1 ? "Y" : "Z")} | vars: X={varX:E3} Y={varY:E3} Z={varZ:E3}");
+
+        // --- SDx: ALWAYS use centerline-based deviation passed from RayBrush ---
+        // (For linear too, make sure RayBrush adds AddDeviation(latO) just like circle/sine)
+        var lateral = new List<float>(curveLateralDeviationList != null ? curveLateralDeviationList.Count : 0);
+
+        if (curveLateralDeviationList != null && curveLateralDeviationList.Count > 0)
+        {
+            lateral.AddRange(curveLateralDeviationList);
+        }
+        else
+        {
+            
+            UnityEngine.Debug.LogWarning("Deviation list was empty!");
+        }
+
         trialStrokeN = lateral.Count;
+
         if (trialStrokeN > 1)
         {
             float sum = 0f, sumSq = 0f;
-            foreach (var v in lateral) { sum += v; sumSq += v * v; }
+            for (int i = 0; i < lateral.Count; i++)
+            {
+                float v = lateral[i];
+                sum += v;
+                sumSq += v * v;
+            }
 
             float mean = sum / trialStrokeN;
             float var = (sumSq - trialStrokeN * mean * mean) / (trialStrokeN - 1); // sample variance

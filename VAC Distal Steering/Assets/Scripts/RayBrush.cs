@@ -51,6 +51,9 @@ public class RayBrush : MonoBehaviour
     // Progress state
     private bool hasPrevP = false;
     private float prevP = 0f;
+    // Sine progress state
+    private bool hasPrevPSine = false;
+    private float prevPSine = 0f;
 
     // Start-zone hysteresis + lap completion
     private bool leftStartZone = false;   // have we been outside the start zone since last crossing?
@@ -59,6 +62,35 @@ public class RayBrush : MonoBehaviour
 
     [SerializeField] bool drawStrokeGizmos = false;
     [SerializeField] float gizmoPointSize = 0.006f;
+
+    [SerializeField] bool debugSine = true;
+    [SerializeField] int debugEveryNFrames = 15;
+
+    private SineBandGenerator sineGen;
+
+    private bool hasPrevXSine = false;
+    private float prevXSine = 0f;
+
+
+    // call this when needed
+    private bool TryGetSineGen()
+    {
+        if (sineGen != null) return true;
+        if (gameManager == null || gameManager.Sine_Path == null) return false;
+        sineGen = gameManager.Sine_Path.GetComponentInChildren<SineBandGenerator>(true);
+        return sineGen != null;
+    }
+
+    private void GetSineProgressLateral(Vector3 surfacePos, out float p, out float lat)
+    {
+        p = 0f; lat = 0f;
+        if (!TryGetSineGen()) return;
+
+        // keep generator direction in sync with current trial direction (0 LR, 1 RL)
+        sineGen.direction = gameManager.CurrentDirection;
+
+        sineGen.EvalWorld(surfacePos, out p, out lat);
+    }
 
 
     void OnDrawGizmos()
@@ -169,10 +201,13 @@ public class RayBrush : MonoBehaviour
             {
                 HandleCircle(surfacePos, bt, L, W, dir);
             }
+            else if(pathType == 3)
+            {
+                HandleSine(surfacePos, bt, L, W, dir);
+            }
             else
             {
-                // Sine later — for now just don’t start steering
-                // Debug.LogWarning($"PathType {pathType} not implemented in RayBrush yet.");
+                Debug.LogError("[Raybrush] Path Type Unknown!");
             }
         }
         else
@@ -550,6 +585,8 @@ public class RayBrush : MonoBehaviour
         gameManager.isSteering = false;
         triggerSteering = false;
         gateArmed = false;
+        hasPrevXSine = false;
+        hasPrevPSine = false; 
 
         if (currentStroke.Count > 1)
         {
@@ -577,6 +614,119 @@ public class RayBrush : MonoBehaviour
             return Mathf.Max(0.01f, dist);
 
         return Vector3.Distance(headTransform.position, board.transform.position);
+    }
+
+    private void HandleSine(Vector3 surfacePos, Transform bt, float L, float W, int dir)
+    {
+        if (!TryGetSineGen()) return;
+
+        // Keep generator direction synced (doesn't affect cap colors; GameManager handles that)
+        sineGen.direction = dir;
+
+        // Convert hit point into sine generator local space
+        Vector3 lp = sineGen.transform.InverseTransformPoint(surfacePos);
+
+        float x = lp.x; // progress axis in generator local space
+        float halfW = W * 0.5f;
+
+        // Use EvalWorld for lateral deviation from centerline (best metric)
+        sineGen.EvalWorld(surfacePos, out float p, out float latO);
+        bool insideWidth = Mathf.Abs(latO) <= halfW;
+
+        // ---- Gate geometry in local-X ----
+        float Lx = sineGen.Lx; // projected X span used by generator
+        float startX = (dir == 0) ? (-Lx * 0.5f) : (Lx * 0.5f);  // LR start left, RL start right
+        float endX = (dir == 0) ? (Lx * 0.5f) : (-Lx * 0.5f); // opposite side
+
+        // Direction sign: LR means moving +X, RL means moving -X
+        float forwardSign = (dir == 0) ? 1f : -1f;
+
+        // “Distance from start gate along forward direction”
+        // outside-start: uStart < 0
+        float uStart = forwardSign * (x - startX);
+
+        // Remaining distance to end along forward direction
+        float remainingToEnd = forwardSign * (endX - x);
+
+        // Tolerances (in meters along X)
+        float startTolX = Mathf.Max(0.02f * Lx, 0.01f); // 2% of Lx or 1cm
+        float endTolX = Mathf.Max(0.02f * Lx, 0.01f);
+        float armTolX = startTolX; // how far outside you must be to arm
+
+        // Forward motion check using x (more stable than p for gating)
+        float dx = 0f;
+        bool movingForward = false;
+        if (hasPrevXSine)
+        {
+            dx = x - prevXSine;
+            movingForward = (forwardSign * dx) > 0.0005f; // 0.5mm
+        }
+
+        if (debugSine && Time.frameCount % debugEveryNFrames == 0)
+        {
+            Debug.Log(
+                $"[SINE DBG] dir={(dir == 0 ? "LR" : "RL")} x={x:F4} startX={startX:F4} endX={endX:F4} " +
+                $"uStart={uStart:F4} remEnd={remainingToEnd:F4} | " +
+                $"p={p:F4}/{L:F4} lat={latO:F4} halfW={halfW:F4} inside={insideWidth} | " +
+                $"dx={dx:F5} forward={movingForward} armed={gateArmed} started={hasStartedStroke}"
+            );
+        }
+
+        prevXSine = x;
+        hasPrevXSine = true;
+
+        // --------------------
+        // START: enter from correct side
+        // --------------------
+        if (!hasStartedStroke && !triggerSteering)
+        {
+            if (!insideWidth)
+            {
+                gateArmed = false;
+                return;
+            }
+
+            // Arm when sufficiently OUTSIDE start (behind the gate)
+            if (uStart < -armTolX) gateArmed = true;
+
+            // Start when armed AND cross into corridor past the start gate (uStart >= 0)
+            if (gateArmed && movingForward && uStart >= 0f && uStart <= startTolX)
+            {
+                triggerSteering = true;
+                gameManager.lockPosRot = true; // freeze path
+                StartStroke();
+                gateArmed = false;
+            }
+
+            return;
+        }
+
+        // --------------------
+        // DURING
+        // --------------------
+        if (hasStartedStroke && gameManager.isSteering)
+        {
+            if (!insideWidth)
+            {
+                EndStroke();
+                gameManager.EndTrial(false);
+                return;
+            }
+
+            // Finish when you reach the end side (remaining distance small)
+            if (movingForward && remainingToEnd <= endTolX)
+            {
+                EndStroke();
+                gameManager.EndTrial(true);
+                return;
+            }
+
+            if (currentStroke.Count == 0 || Vector3.Distance(currentStroke[^1], surfacePos) > 0.01f)
+            {
+                AddPoint(surfacePos);
+                AddDeviation(latO); // centerline-based deviation
+            }
+        }
     }
 
     public void SaveStrokes()
