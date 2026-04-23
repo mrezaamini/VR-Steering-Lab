@@ -109,30 +109,30 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
     public List<Vector2> path_ang_lwf = new List<Vector2>()
     {
         new Vector2(2f, 25f),   // 0
-        new Vector2(2f, 35f),   // 1
-        new Vector2(2f, 50f),   // 2
+        //new Vector2(2f, 35f),   // 1
+        //new Vector2(2f, 50f),   // 2
 
-        new Vector2(3f, 25f),   // 3
-        new Vector2(3f, 35f),   // 4
-        new Vector2(3f, 50f),   // 5
+        //new Vector2(3f, 25f),   // 3
+        //new Vector2(3f, 35f),   // 4
+        //new Vector2(3f, 50f),   // 5
 
-        new Vector2(4.5f, 25f), // 6
-        new Vector2(4.5f, 35f), // 7
-        new Vector2(4.5f, 50f), // 8
+        //new Vector2(4.5f, 25f), // 6
+        //new Vector2(4.5f, 35f), // 7
+        //new Vector2(4.5f, 50f), // 8
 
-        new Vector2(6f, 25f),   // 9
-        new Vector2(6f, 35f),   //10
-        new Vector2(6f, 50f),   //11
+        //new Vector2(6f, 25f),   // 9
+        //new Vector2(6f, 35f),   //10
+        //new Vector2(6f, 50f),   //11
     };
 
     List<float> depth_list = new List<float>()
     {
-        0.6666f,
-        0.8f,
+        //0.6666f,
+        //0.8f,
         1f,
-        1.3333f,
-        2f,
-        4f
+        //1.3333f,
+        //2f,
+        //4f
     };
 
     public int CurrentPathType => trial_path_type;
@@ -146,12 +146,12 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
 
     public float getCurrentWidth()
     {
-        return GetAngularWidth(trialW);
+        return trialW;
     }
 
     public float getCurrentLen()
     {
-        return GetAngularLength(trialL);
+        return trialL;
     }
 
     public float getCurrentRep()
@@ -431,19 +431,52 @@ public class GameManager : MonoBehaviour // GAME MANAGER FOR PLACEMENT PILOT STU
         List<(Vector3 position, int repetition)> path_conditions =
         combine_path_geo(path_ang_lwf, depth_list, PID);
 
-        foreach (var (position, repetition) in path_conditions)
+        float path_type_cond = PID % 12;
+        if (path_type_cond < 6)
         {
-            int first = rng.Next(2);   // 0 or 1
-            int second = 1 - first;    // ensures both values appear
+            foreach (var (position, repetition) in path_conditions)
+            {
+                int first = rng.Next(2);   // 0 or 1
+                int second = 1 - first;    // ensures both values appear
 
-            //circular
-            //trials.Add((2, position, repetition, first));
-            //trials.Add((2, position, repetition, second));
+                //circular
+                trials.Add((2, position, repetition, first));
+                trials.Add((2, position, repetition, second));
+            }
 
-            //sine wave
-            trials.Add((2, position, repetition, first));
-            trials.Add((3, position, repetition, second));
+            foreach (var (position, repetition) in path_conditions)
+            {
+                int first = rng.Next(2);   // 0 or 1
+                int second = 1 - first;    // ensures both values appear
+
+                //sine wave
+                //trials.Add((3, position, repetition, first));
+                //ftrials.Add((3, position, repetition, second));
+            }
+        } else
+        {
+            foreach (var (position, repetition) in path_conditions)
+            {
+                int first = rng.Next(2);   // 0 or 1
+                int second = 1 - first;    // ensures both values appear
+                                           //sine wave
+                trials.Add((3, position, repetition, first));
+                trials.Add((3, position, repetition, second));
+
+            }
+
+            foreach (var (position, repetition) in path_conditions)
+            {
+                int first = rng.Next(2);   // 0 or 1
+                int second = 1 - first;    // ensures both values appear
+
+                //circular
+                trials.Add((2, position, repetition, first));
+                trials.Add((2, position, repetition, second));
+            }
         }
+
+        
 
         return trials;
     }

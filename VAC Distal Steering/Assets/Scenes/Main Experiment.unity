@@ -166,7 +166,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 19079385a5ddadd4c8fc58f8e2bad37d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: '::'
-  capLengthLxRef: 0.1
+  capLengthLxRef: 0.03
   mainMat: {fileID: 2100000, guid: 39b9d79941606f2478efc97b88cd3f41, type: 2}
   startMat: {fileID: 2100000, guid: 56109d86abb99cf4fb72f7989c5e200c, type: 2}
   endMat: {fileID: 2100000, guid: f581d063be01ed9429a332411cad969a, type: 2}
@@ -8623,7 +8623,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9a0adf505875460468e721ad1cd55c2f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  participantID: 17
+  participantID: 23
   isMale: 0
   isRightHanded: 1
   success_sound: {fileID: 1622218504}

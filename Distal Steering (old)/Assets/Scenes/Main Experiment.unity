@@ -18136,9 +18136,45 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 65941681174439273, guid: 48c060acf9e9a294cb0a36744829a99c, type: 3}
+      propertyPath: m_Enabled
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 604862975380048579, guid: 48c060acf9e9a294cb0a36744829a99c, type: 3}
       propertyPath: m_Name
       value: LinearPath
+      objectReference: {fileID: 0}
+    - target: {fileID: 3050026292704078146, guid: 48c060acf9e9a294cb0a36744829a99c, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3050026292704078146, guid: 48c060acf9e9a294cb0a36744829a99c, type: 3}
+      propertyPath: m_TagString
+      value: StartPoint
+      objectReference: {fileID: 0}
+    - target: {fileID: 3904083200695557501, guid: 48c060acf9e9a294cb0a36744829a99c, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -4.832
+      objectReference: {fileID: 0}
+    - target: {fileID: 3904083200695557501, guid: 48c060acf9e9a294cb0a36744829a99c, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.001
+      objectReference: {fileID: 0}
+    - target: {fileID: 4183361756911310803, guid: 48c060acf9e9a294cb0a36744829a99c, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4847159082944447234, guid: 48c060acf9e9a294cb0a36744829a99c, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4980427248185599153, guid: 48c060acf9e9a294cb0a36744829a99c, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4980427248185599153, guid: 48c060acf9e9a294cb0a36744829a99c, type: 3}
+      propertyPath: m_TagString
+      value: EndPoint
       objectReference: {fileID: 0}
     - target: {fileID: 5057491774496173389, guid: 48c060acf9e9a294cb0a36744829a99c, type: 3}
       propertyPath: smoothFollow
@@ -18152,6 +18188,10 @@ PrefabInstance:
       propertyPath: childBaseVisualWidth
       value: 0.5
       objectReference: {fileID: 0}
+    - target: {fileID: 6776824245310781706, guid: 48c060acf9e9a294cb0a36744829a99c, type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: 6bd30dc58d228684c98bbf06f1a08ae9, type: 2}
     - target: {fileID: 7564602047361753775, guid: 48c060acf9e9a294cb0a36744829a99c, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -18191,6 +18231,14 @@ PrefabInstance:
     - target: {fileID: 7564602047361753775, guid: 48c060acf9e9a294cb0a36744829a99c, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7755966942722140076, guid: 48c060acf9e9a294cb0a36744829a99c, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 4.806
+      objectReference: {fileID: 0}
+    - target: {fileID: 7755966942722140076, guid: 48c060acf9e9a294cb0a36744829a99c, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.002
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

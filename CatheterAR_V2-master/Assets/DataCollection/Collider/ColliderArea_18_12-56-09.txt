@@ -1,0 +1,1 @@
+ParticipantNumber; Nurse; Click Counter; Assistance Activated; Controller Position; Pointer Position; Target Position; Syringe angle x; Syringe anfle y; Syringe angle z; Accuracy x; Accuracy y; isInside; Distance b/w Syringe and Insert position; Total Time; 

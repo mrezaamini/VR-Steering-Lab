@@ -117,7 +117,7 @@ public class ExperimentUI : MonoBehaviour
         //Debug.Log("progress: " + overall_progress);
 
         // Rep number
-        currentClickInfo = $"Rep: {gameManager.getCurrentRep()+1} / 5";
+        currentClickInfo = $"Rep: {gameManager.getCurrentRep()+1} / 3";
     }
 
     
