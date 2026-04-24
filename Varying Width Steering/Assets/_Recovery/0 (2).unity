@@ -7085,7 +7085,6 @@ MonoBehaviour:
   originalHand_material: {fileID: 2100000, guid: d641a50c4fe4ee3489a64cf52b76ae79, type: 2}
   rightHandObject: {fileID: 1720198937}
   leftHandObject: {fileID: 1335373485}
-  error_tunnel_material: {fileID: 2100000, guid: 648a239311d6e6f4093db29339809f50, type: 2}
   ballTransform: {fileID: 341271297}
   cursor: {fileID: 341271291}
   tunnelBuilder: {fileID: 1636096128}
@@ -7964,10 +7963,6 @@ PrefabInstance:
     - target: {fileID: 4278913787214962675, guid: 8f49f08c06265134387e5feb9a1562e7, type: 3}
       propertyPath: m_Name
       value: PokeInteractable
-      objectReference: {fileID: 0}
-    - target: {fileID: 5558670699928155959, guid: 8f49f08c06265134387e5feb9a1562e7, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: -0.04
       objectReference: {fileID: 0}
     - target: {fileID: 8193397903214216251, guid: 8f49f08c06265134387e5feb9a1562e7, type: 3}
       propertyPath: m_LocalPosition.x
@@ -9359,7 +9354,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TunnelBuilder
   radialSegments: 32
   tunnelMaterial: {fileID: 2100000, guid: d41da9a2fbc49524db9fc1767e18a946, type: 2}
-  currentTunnelGO: {fileID: 0}
 --- !u!4 &1636096129
 Transform:
   m_ObjectHideFlags: 0

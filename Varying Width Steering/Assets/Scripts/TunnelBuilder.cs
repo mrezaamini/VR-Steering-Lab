@@ -6,7 +6,7 @@ public class TunnelBuilder : MonoBehaviour
     public int radialSegments = 32;
     public Material tunnelMaterial;
 
-    private GameObject currentTunnelGO;
+    public GameObject currentTunnelGO;
 
     /// <summary>
     /// Destroys any previous tunnel, builds a new mesh, and returns
@@ -19,6 +19,9 @@ public class TunnelBuilder : MonoBehaviour
         if (currentTunnelGO != null)
             Destroy(currentTunnelGO);
 
+        float r0 = cfg.startWidth;
+        float r1 = cfg.endWidth;
+
         currentTunnelGO = new GameObject("Tunnel");
         currentTunnelGO.transform.SetParent(transform, worldPositionStays: true);
 
@@ -26,18 +29,16 @@ public class TunnelBuilder : MonoBehaviour
         var mr = currentTunnelGO.AddComponent<MeshRenderer>();
         mr.material = tunnelMaterial;
 
-        Debug.Log("Tunnel info:  start>" + cfg.startWidth + " | end>" + cfg.endWidth);
-
         mf.mesh = BuildFrustumMesh(startPt, endPt,
-                                        cfg.startWidth, cfg.endWidth,
+                                        r0/2, r1/2,
                                         radialSegments);
 
         return new TunnelSegment
         {
             startPoint = startPt,
             endPoint = endPt,
-            startRadius = cfg.startWidth,
-            endRadius = cfg.endWidth
+            startRadius = r0/2,
+            endRadius = r1/2
         };
     }
 
@@ -48,6 +49,7 @@ public class TunnelBuilder : MonoBehaviour
     Mesh BuildFrustumMesh(Vector3 startPt, Vector3 endPt,
                           float r0, float r1, int segs)
     {
+        
         // Build in local space along +Z then rotate to match world axis
         Vector3 axisDir = (endPt - startPt).normalized;
         float length = Vector3.Distance(startPt, endPt);
