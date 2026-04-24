@@ -8,15 +8,33 @@ public class BallController : MonoBehaviour
     //public float maxSpeed = 8f;
 
     private Rigidbody rb;
+    private MeshRenderer ballRenderer;
+    private SphereCollider ballCollider;
 
     public Vector3 Velocity => rb.linearVelocity;
 
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
-    //    rb.useGravity = false;
-    //    rb.constraints = RigidbodyConstraints.FreezePositionY
-    //                   | RigidbodyConstraints.FreezeRotation;
+        ballRenderer = GetComponent<MeshRenderer>();
+        ballCollider = GetComponent<SphereCollider>();
+        rb.useGravity = false;
+        //    rb.useGravity = false;
+        //    rb.constraints = RigidbodyConstraints.FreezePositionY
+        //                   | RigidbodyConstraints.FreezeRotation;
+    }
+
+    public void HideBall()
+    {
+        ballRenderer.enabled = false;
+       
+
+    }
+
+    public void ShowBall()
+    {
+        ballRenderer.enabled = true;
+ 
     }
 
     //void FixedUpdate()
@@ -34,8 +52,10 @@ public class BallController : MonoBehaviour
 
     public void TeleportTo(Vector3 worldPos)
     {
-        rb.MovePosition(worldPos);
+        HideBall();
+        rb.position = worldPos;
         rb.linearVelocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
+        ShowBall();
     }
 }

@@ -34,7 +34,7 @@ public struct TunnelSegment
         float allowedRadius = Mathf.Lerp(startRadius, endRadius, tClamped);
 
         // t must be in (0,1) — ball outside the caps is considered out
-        bool inside = (t >= 0f && t <= 1f) && (radialDist <= allowedRadius);
+        bool inside = (t >= 0f) && (radialDist <= allowedRadius);
 
         return (inside, tClamped, radialDist, allowedRadius);
     }

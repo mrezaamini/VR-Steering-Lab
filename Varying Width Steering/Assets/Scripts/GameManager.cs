@@ -27,9 +27,12 @@ public class GameManager : MonoBehaviour
 
     [Header("Scene References")]
     public Transform ballTransform;
+    public GameObject cursor;
     public TunnelBuilder tunnelBuilder;
     public BallController ballController;
     public GameObject startButton;
+    public AudioClip success_sound;
+    public AudioClip error_sound;
     private GameObject mainCamera;
     private bool calibrationStatus = false; //should be false at start
     private Vector3 scenePosition;
@@ -45,7 +48,7 @@ public class GameManager : MonoBehaviour
     // -------------------------------------------------------------------------
 
     private List<TrialConfig> trialList = new List<TrialConfig>();
-    private int currentTrialIndex = -1;
+    private int currentTrialIndex = 0;
     private TrialData currentTrial;
     private TunnelSegment currentTunnel;
     private List<TrialData> allTrials = new List<TrialData>();
@@ -59,10 +62,17 @@ public class GameManager : MonoBehaviour
 
     private Stopwatch steeringSW;
     private Stopwatch contactSW;
-    //TODO: check width and lateral freedom in generation: should be the condition-ball diameter
+
+    public DebugText UI_Debug;
+    //TODO: check width and lateral freedom in generation: should be the condition-ball diameter, also prevBallPos
     // -------------------------------------------------------------------------
     // Unity lifecycle
     // -------------------------------------------------------------------------
+    void Awake()
+    {
+        // Hide ball immediately at runtime instead of deactivating in editor
+        ballController.HideBall();
+    }
 
     void Start()
     {
@@ -75,13 +85,13 @@ public class GameManager : MonoBehaviour
 
     void Update()
     {
+        if (!calibrationStatus) return;
+        UI_Debug.updateText("calibrated!");
+        //UnityEngine.Debug.Log("Calibrated!");
         if (!studyActive) return;
 
-
-        if (!calibrationStatus) return;
-
         Vector3 ballPos = ballTransform.position;
-
+        
         if (!isSteering)
         {
             
@@ -90,8 +100,10 @@ public class GameManager : MonoBehaviour
             Vector3 closestOnAxis = ballStartPos + taskAxisDir * forwardDisplacement;
             float distToAxis = Vector3.Distance(ballPos, closestOnAxis);
 
-            bool enteredPath = Mathf.Abs(forwardDisplacement - 0.05f) < 0.0001f;         // >=5 cm forward
+            bool enteredPath = forwardDisplacement >= 0.05f;         // >=5 cm forward
             bool withinBoundary = distToAxis <= currentTunnel.startRadius + BALL_DIAMETER;
+
+            UI_Debug.updateText("enteredPath:"+enteredPath+" withinBoundary:"+withinBoundary+" dis:"+ forwardDisplacement+ " distToAx:"+distToAxis);
 
             if (enteredPath && withinBoundary)
             {
@@ -113,10 +125,12 @@ public class GameManager : MonoBehaviour
 
         // Active steering 
         var (inside, t, radialDist, allowedRadius) = currentTunnel.Evaluate(ballPos);
+        UI_Debug.updateText("inside:"+inside+" t:"+t+" distance:"+radialDist+" allowed:"+allowedRadius);
         if (!inside)
         {
-            currentTrial.resetCount++;
-            ResetBallToStart();
+            //currentTrial.resetCount++;
+            //ResetBallToStart();
+            CompleteTrial(false);
             return;
         }
 
@@ -126,7 +140,7 @@ public class GameManager : MonoBehaviour
         prevBallPos = ballPos;
 
         if (t >= 0.999f)
-            CompleteTrial(success: true);
+            CompleteTrial(true);
     }
 
     public void startExperiment()
@@ -145,6 +159,7 @@ public class GameManager : MonoBehaviour
        scenePosition = startPos + cameraForward*0.35f + Vector3.down*0.15f;
        
         calibrationStatus = true;
+        currentTrialIndex++;
         StartNextTrial();
     }
 
@@ -186,9 +201,7 @@ public class GameManager : MonoBehaviour
     // -------------------------------------------------------------------------
 
     void StartNextTrial()
-    {
-        currentTrialIndex++;
-
+    { 
         if (currentTrialIndex >= trialList.Count)
         {
             EndStudy();
@@ -218,6 +231,7 @@ public class GameManager : MonoBehaviour
         taskAxisDir = (endPt - startPt).normalized; // forward direction of the task
         ballStartPos = startPt - taskAxisDir * 0.05f; // 5 cm before start cap
         ResetBallToStart();
+        
         isSteering = false;
         studyActive = true;
 
@@ -226,15 +240,36 @@ public class GameManager : MonoBehaviour
 
     void ResetBallToStart()
     {
+        cursor.SetActive(true);
         ballController.TeleportTo(ballStartPos);
-        prevBallPos = ballStartPos;
+
+        //prevBallPos = ballStartPos;
     }
 
     void CompleteTrial(bool success)
     {
         studyActive = false;
+        isSteering = false;
         currentTrial.endTime = Time.time;
         currentTrial.completed = success;
+        cursor.SetActive(false);
+
+        if (isRightHanded)
+        {
+            rightHandObject.GetComponent<SkinnedMeshRenderer>().material = originalHand_material;
+        }
+        else
+        {
+            leftHandObject.GetComponent<SkinnedMeshRenderer>().material = originalHand_material;
+        }
+
+        if (success)
+        {
+            AudioSource.PlayClipAtPoint(success_sound, Camera.main.transform.position);
+            currentTrialIndex++;
+        }
+        else
+            AudioSource.PlayClipAtPoint(error_sound, Camera.main.transform.position);
 
         ComputeSummaryStats(currentTrial);
         allTrials.Add(currentTrial);
@@ -243,6 +278,7 @@ public class GameManager : MonoBehaviour
         UnityEngine.Debug.Log($"[Study] Trial {currentTrial.trialIndex} complete. " +
                   $"Resets: {currentTrial.resetCount}  " +
                   $"Duration: {currentTrial.Duration:F2}s");
+        
 
         Invoke(nameof(StartNextTrial), interTrialDelay);
     }
