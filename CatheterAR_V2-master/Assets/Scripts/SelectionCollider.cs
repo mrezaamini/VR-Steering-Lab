@@ -8,7 +8,7 @@ public class SelectionCollider : MonoBehaviour
     // Start is called before the first frame update
 
     public Recorder recorder;
-    public SphereInsert sphereInsert;
+    //public SphereInsert sphereInsert;
     public GameObject syringe;
     public GameObject syringeRight;
     public GameObject syringeLeft;
@@ -30,25 +30,25 @@ public class SelectionCollider : MonoBehaviour
 
     }
 
-    private void OnTriggerEnter(Collider other)
-    {
-        sphereInsert = FindObjectOfType<SphereInsert>();
-        if(other.gameObject.tag == "Pointer" && syringe.activeSelf)
-        {
-            if(sphereInsert != null)
-            {
-                syringe.SetActive(false);
-                recorder.isInside = sphereInsert.inside;
-                recorder.summaryWriter();
-                if(recorder.isInside)
-                    audioSuccess.Play(1);
-                else 
-                    audioFailure.Play(1);
-                DisplayAngle();
-                Invoke("StopDisplayAngle", 2f);
-            }
-        }
-    }
+    //private void OnTriggerEnter(Collider other)
+    //{
+    //    sphereInsert = FindObjectOfType<SphereInsert>();
+    //    if(other.gameObject.tag == "Pointer" && syringe.activeSelf)
+    //    {
+    //        if(sphereInsert != null)
+    //        {
+    //            syringe.SetActive(false);
+    //            recorder.isInside = sphereInsert.inside;
+    //            recorder.summaryWriter();
+    //            if(recorder.isInside)
+    //                audioSuccess.Play(1);
+    //            else 
+    //                audioFailure.Play(1);
+    //            DisplayAngle();
+    //            Invoke("StopDisplayAngle", 2f);
+    //        }
+    //    }
+    //}
 
     private void DisplayAngle()
     {

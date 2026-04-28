@@ -1569,6 +1569,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f44d5ed42a7a38343a99ee498e184eee, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  CalibrationDone: 0
   calibrationBall: {fileID: 8095205081630139115, guid: a62f5604a1f206441898783143215de4, type: 3}
   insertionZonePrefab: {fileID: 7081170543329203182, guid: 3cbe2d0573018004fa27056c30ac65ee, type: 3}
   pointerPosition: {fileID: 0}
@@ -1577,11 +1578,11 @@ MonoBehaviour:
   syringe: {fileID: 0}
   syringeRight: {fileID: 924470610}
   syringeLeft: {fileID: 1503081082}
+  insertionZone: {fileID: 630465175990700051, guid: 3cbe2d0573018004fa27056c30ac65ee, type: 3}
+  armRoot: {fileID: 0}
   controllerVisual: {fileID: 0}
   controllerVisualRight: {fileID: 931869773}
   controllerVisualLeft: {fileID: 649065397}
-  controller: 2
-  insertionZone: {fileID: 7081170543329203182, guid: 3cbe2d0573018004fa27056c30ac65ee, type: 3}
   triggerVal: 0
   startTime: 0
   allBalls: []
@@ -1591,7 +1592,6 @@ MonoBehaviour:
   selectionCollider: {fileID: 332374518}
   recorderCollider: {fileID: 569427483}
   recorder: {fileID: 0}
-  sCollider: {fileID: 332374522}
   left: {fileID: 2000057630}
   right: {fileID: 1808352462}
   status: {fileID: 124626983}
@@ -2596,7 +2596,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   recorder: {fileID: 0}
-  sphereInsert: {fileID: 0}
   syringe: {fileID: 924470610}
   syringeRight: {fileID: 924470610}
   syringeLeft: {fileID: 1503081082}
@@ -10504,6 +10503,111 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!1 &1730779234
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1730779238}
+  - component: {fileID: 1730779237}
+  - component: {fileID: 1730779236}
+  - component: {fileID: 1730779235}
+  m_Layer: 0
+  m_Name: InsertPoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!135 &1730779235
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1730779234}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Radius: 0.5
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!23 &1730779236
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1730779234}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RayTraceProcedural: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: 5f562f851af61b24ba5d3dc84a215197, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_AdditionalVertexStreams: {fileID: 0}
+--- !u!33 &1730779237
+MeshFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1730779234}
+  m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!4 &1730779238
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1730779234}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 0.01, y: 0.01, z: 0.01}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1737837366
 GameObject:
   m_ObjectHideFlags: 0
@@ -10849,6 +10953,53 @@ SkinnedMeshRenderer:
     m_Center: {x: 0.016699273, y: -0.03636414, z: -0.018954389}
     m_Extent: {x: 0.05463389, y: 0.050220694, z: 0.051451057}
   m_DirtyAABB: 0
+--- !u!1 &1782830927
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1782830929}
+  - component: {fileID: 1782830928}
+  m_Layer: 0
+  m_Name: TunnelRoot
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1782830928
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1782830927}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 473d88db3d33d7e43963610914ca3141, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  radialSegments: 32
+  tunnelMaterial: {fileID: 2100000, guid: 871d9e08fc03ce7479ed46f6eb1b4905, type: 2}
+  currentTunnelGO: {fileID: 0}
+--- !u!4 &1782830929
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1782830927}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1802450957
 GameObject:
   m_ObjectHideFlags: 0
@@ -11926,7 +12077,7 @@ MonoBehaviour:
   pointer: {fileID: 1748997109}
   pointerLeft: {fileID: 1477564240}
   pointerRight: {fileID: 1748997109}
-  target: {fileID: 0}
+  randomizeOrder: 1
   calibrationPoints: []
   syringe: {fileID: 924470610}
   syringeRight: {fileID: 924470610}
@@ -11944,7 +12095,12 @@ MonoBehaviour:
   ParticipantNumber: 21
   leftHanded: 0
   isNurse: 0
-  activateVisualGuides: {fileID: 0}
+  armCalibration: {fileID: 170180680}
+  tunnelBuilder: {fileID: 1782830928}
+  insertPoint: {fileID: 1730779234}
+  success_sound: {fileID: 8300000, guid: 4580cefe49a4c9349969382324319d35, type: 3}
+  error_sound: {fileID: 8300000, guid: a5b484752d450d5449c0a05eb5a52f42, type: 3}
+  interTrialDelay: 1
 --- !u!4 &1950660961
 Transform:
   m_ObjectHideFlags: 0
@@ -13156,3 +13312,5 @@ SceneRoots:
   - {fileID: 340304821}
   - {fileID: 17954394}
   - {fileID: 858587969}
+  - {fileID: 1782830929}
+  - {fileID: 1730779238}

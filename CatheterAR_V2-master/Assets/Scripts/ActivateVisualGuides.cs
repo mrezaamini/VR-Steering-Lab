@@ -12,7 +12,7 @@ public class ActivateVisualGuides : MonoBehaviour
     private void Start()
     {
         recorder = FindObjectOfType<Recorder>();
-        recorder.SetVisualGuides();
+        //recorder.SetVisualGuides();
     }
 
     public void SetActivation(bool activated)

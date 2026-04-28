@@ -145,7 +145,7 @@ using UnityEngine;
 public class ArmCalibration : MonoBehaviour
 {
     private int numBalls;
-
+    public bool CalibrationDone;
     [SerializeField] GameObject calibrationBall;
     [SerializeField] GameObject insertionZonePrefab;
 
@@ -157,11 +157,14 @@ public class ArmCalibration : MonoBehaviour
     public GameObject syringeRight;
     public GameObject syringeLeft;
 
+    public Transform insertionZone;   // the InsertionZone child
+   
+    public Transform armRoot;
+
     public GameObject controllerVisual;
     public GameObject controllerVisualRight;
     public GameObject controllerVisualLeft;
 
-    public GameObject insertionZone;
 
     public float triggerVal;
     public float startTime;
@@ -182,10 +185,10 @@ public class ArmCalibration : MonoBehaviour
     public GameObject right;
 
     public TMP_Text status;
-
     void Start()
     {
         recorder = FindObjectOfType<Recorder>();
+        CalibrationDone = false;
 
         if (recorder.leftHanded)
         {
@@ -235,6 +238,7 @@ public class ArmCalibration : MonoBehaviour
             startTime = Time.time;
             InstantiateBalls();
         }
+        
     }
 
     public void InstantiateBalls()
@@ -268,13 +272,17 @@ public class ArmCalibration : MonoBehaviour
 
         
 
-        InstantiateInsertionZone();
+        InstantiateInsertionZone(armInstance.transform);
 
-        recorder.sphereInsert = armInstance.GetComponentInChildren<SphereInsert>();
-
+        //recorder.sphereInsert = armInstance.GetComponentInChildren<SphereInsert>();
+        CalibrationDone = true;
+        recorder.StartNextTrial();
         StartText("Training started");
         Invoke(nameof(StopText), 4f);
+
     }
+
+    
 
     private void AlignArmToCalibration(GameObject armInstance)
     {
@@ -331,29 +339,36 @@ public class ArmCalibration : MonoBehaviour
         armInstance.transform.position += targetArmpit - armpitRef.position;
     }
 
-    public void InstantiateInsertionZone()
+    public void InstantiateInsertionZone(Transform armInstance)
     {
-        Vector3 wristCenter =
-            (allBalls[2].transform.position + allBalls[3].transform.position) / 2f;
+        //Vector3 wristCenter =
+        //    (allBalls[2].transform.position + allBalls[3].transform.position) / 2f;
 
-        insertionZone = GameObject.FindGameObjectWithTag("InsertionZone");
+        //insertionZone = GameObject.FindGameObjectWithTag("InsertionZone");
 
-        if (insertionZone != null)
-        {
-            insertionZone.transform.position = wristCenter;
+        //if (insertionZone != null)
+        //{
+        //    insertionZone.transform.position = wristCenter;
 
-            recorder.target = insertionZone.transform;
+        //    recorder.target = insertionZone.transform;
 
-            selectionCollider.transform.position = new Vector3(
-                insertionZone.transform.position.x,
-                insertionZone.transform.position.y,
-                insertionZone.transform.position.z + 0.501f
-            );
+        //    selectionCollider.transform.position = new Vector3(
+        //        insertionZone.transform.position.x,
+        //        insertionZone.transform.position.y,
+        //        insertionZone.transform.position.z + 0.501f
+        //    );
 
-            recorderCollider.transform.position = insertionZone.transform.position;
-            recorderCollider.transform.LookAt(HMDCamera);
-        }
+        //    recorderCollider.transform.position = insertionZone.transform.position;
+        //    recorderCollider.transform.LookAt(HMDCamera);
+        //}
 
+        //set the guidance 
+        insertionZone = armInstance.Find("InsertionZone");
+        
+
+        if (insertionZone == null)
+            Debug.LogError("[ArmTunnelSetup] InsertionZone not found on arm prefab.");
+        
         controllerSyringe.SetSyringe(
             pointerPosition,
             syringe,

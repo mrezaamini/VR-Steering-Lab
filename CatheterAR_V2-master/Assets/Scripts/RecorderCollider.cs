@@ -21,26 +21,26 @@ public class RecorderCollider : MonoBehaviour
     }
 
 
-    private void OnTriggerEnter(Collider other)
-    {
-        if(sphereInsert == null)
-        {
-            sphereInsert = FindObjectOfType<SphereInsert>();
-        }
-        if (other.gameObject.tag == "Pointer")
-        {
-            recorder.inCollider = true;
-        }
-    }
+    //private void OnTriggerEnter(Collider other)
+    //{
+    //    if(sphereInsert == null)
+    //    {
+    //        sphereInsert = FindObjectOfType<SphereInsert>();
+    //    }
+    //    if (other.gameObject.tag == "Pointer")
+    //    {
+    //        recorder.inCollider = true;
+    //    }
+    //}
 
-    private void OnTriggerExit(Collider other)
-    {
-        if(other.gameObject.tag == "Pointer")
-        {
-            recorder.inCollider = false;
-            syringe.SetActive(true);
-            sphereInsert.ResetVisualGuides();
+    //private void OnTriggerExit(Collider other)
+    //{
+    //    if(other.gameObject.tag == "Pointer")
+    //    {
+    //        recorder.inCollider = false;
+    //        syringe.SetActive(true);
+    //        sphereInsert.ResetVisualGuides();
 
-        }
-    }
+    //    }
+    //}
 }

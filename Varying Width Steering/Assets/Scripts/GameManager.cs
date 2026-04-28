@@ -8,12 +8,12 @@ public class GameManager : MonoBehaviour
     // -------------------------------------------------------------------------
     // Inspector
     // -------------------------------------------------------------------------
-    private float[] pathLengths = { 0.2f, 0.4f };
+    private float[] pathLengths = { 0.1f ,0.2f, 0.4f };
     private float[] startWidths = { 0.02f };
     private float[] endWidths = { 0.08f };
     private MovementDirection[] directions = { MovementDirection.LeftToRight,
                                                   MovementDirection.RightToLeft };
-    private int repetitions = 2;
+    private int repetitions = 5;
     public bool randomizeOrder = true;
 
     [Header("Participant")]
