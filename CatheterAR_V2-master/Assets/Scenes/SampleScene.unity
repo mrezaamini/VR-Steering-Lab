@@ -10515,6 +10515,7 @@ GameObject:
   - component: {fileID: 1730779237}
   - component: {fileID: 1730779236}
   - component: {fileID: 1730779235}
+  - component: {fileID: 1730779239}
   m_Layer: 0
   m_Name: InsertPoint
   m_TagString: Untagged
@@ -10537,7 +10538,7 @@ SphereCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
@@ -10608,6 +10609,22 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1730779239
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1730779234}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 465c8c57bb2c3404cabb4dc3ecc26814, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  recorder: {fileID: 1950660960}
+  syringeLeft: {fileID: 1503081082}
+  syringeRight: {fileID: 924470610}
+  successMaterial: {fileID: 2100000, guid: 8fc444a09a955064587c4b1ff7fc0a86, type: 2}
 --- !u!1 &1737837366
 GameObject:
   m_ObjectHideFlags: 0
@@ -12077,6 +12094,7 @@ MonoBehaviour:
   pointer: {fileID: 1748997109}
   pointerLeft: {fileID: 1477564240}
   pointerRight: {fileID: 1748997109}
+  pointerMaterial: {fileID: 2100000, guid: 5f562f851af61b24ba5d3dc84a215197, type: 2}
   randomizeOrder: 1
   calibrationPoints: []
   syringe: {fileID: 924470610}
@@ -12098,6 +12116,7 @@ MonoBehaviour:
   armCalibration: {fileID: 170180680}
   tunnelBuilder: {fileID: 1782830928}
   insertPoint: {fileID: 1730779234}
+  ballTransform: {fileID: 0}
   success_sound: {fileID: 8300000, guid: 4580cefe49a4c9349969382324319d35, type: 3}
   error_sound: {fileID: 8300000, guid: a5b484752d450d5449c0a05eb5a52f42, type: 3}
   interTrialDelay: 1

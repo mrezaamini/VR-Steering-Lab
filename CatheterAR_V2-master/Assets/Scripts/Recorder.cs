@@ -16,6 +16,7 @@ public class Recorder : MonoBehaviour
     public Transform pointer;
     public Transform pointerLeft;
     public Transform pointerRight;
+    public Material pointerMaterial;
 
     private int repetitions = 5;
     public bool randomizeOrder = true;
@@ -64,8 +65,8 @@ public class Recorder : MonoBehaviour
 
     private Stopwatch steeringSW;
     private string summaryPath;
-    private float[] pathLengths = {0.1f, 0.2f};
-    private float[] startWidths = { 0.04f };
+    private float[] pathLengths = {0.1f};
+    private float[] startWidths = { 0.02f,0.08f };
     private float[] endWidths = {0.01f};
 
     private List<TrialConfig> trialList = new List<TrialConfig>();
@@ -84,11 +85,12 @@ public class Recorder : MonoBehaviour
     public TunnelBuilder tunnelBuilder;
 
     public GameObject insertPoint;
-    private Transform ballTransform;
+    public Transform ballTransform;
 
     public AudioClip success_sound;
     public AudioClip error_sound;
     public float interTrialDelay = 1f;
+    private bool pointer_reset = false;
 
     // Start is called before the first frame update
     void Start()
@@ -218,23 +220,17 @@ public class Recorder : MonoBehaviour
 
     public Vector2 AngleOffset()
     {
-        float x = 0;
-        float y = 0;
+        // x is up(+) and down (-). y is left(+) and right (-)
+        Vector3 syringeForward = syringe.transform.forward;
+        Vector3 targetForward = armCalibration.insertionZone.forward; 
 
-        if (syringe.transform.eulerAngles.x > 180f)
-        {
-            x = 396.15f - syringe.transform.eulerAngles.x;
-        }
-        else
-            x = syringe.transform.eulerAngles.x - 36f;
+        float x = Vector3.SignedAngle(Vector3.ProjectOnPlane(targetForward, Vector3.right),
+                                       Vector3.ProjectOnPlane(syringeForward, Vector3.right),
+                                       Vector3.right);
 
-        if (syringe.transform.eulerAngles.y > 180f)
-        {
-            y = syringe.transform.eulerAngles.y - 347.85f;
-        }
-        else
-            y = syringe.transform.eulerAngles.y + 12.15f;
-        
+        float y = Vector3.SignedAngle(Vector3.ProjectOnPlane(targetForward, Vector3.up),
+                                       Vector3.ProjectOnPlane(syringeForward, Vector3.up),
+                                       Vector3.up);
         return new Vector2(x, y);
     }
 
@@ -307,12 +303,28 @@ public class Recorder : MonoBehaviour
         if (!studyActive) return;
 
         Vector3 ballPos = pointer.position;
-        var (inside, t, progress, radialDist, verticalOffset, depthOffset, allowedRadius) = currentTunnel.Evaluate(ballPos);
+        var (inside, t, progress, radialDist, allowedRadius) = currentTunnel.Evaluate(ballPos);
 
+        
         if (!isSteering)
         {
+            if (!pointer_reset && !inside)
+            {
+                Vector3 axis = currentTunnel.endPoint - currentTunnel.startPoint;
+                float axisLen = axis.magnitude;
+                Vector3 axisDir = axis / axisLen;
+
+                float l = Vector3.Dot(ballPos - currentTunnel.startPoint, axisDir);
+                float ballProg = l / axisLen;
+
+                if (ballProg < -0.05f)
+                {
+                    pointer_reset = true;
+                    StartText("GO!");
+                }
+            }
             
-            if (inside && t>=0)
+            if (pointer_reset && inside && t>=0)
             {
                 isSteering = true;
                 steeringSW.Restart();
@@ -326,13 +338,15 @@ public class Recorder : MonoBehaviour
 
         if (!inside)
         {
-            //currentTrial.resetCount++;
-            //ResetBallToStart();
             CompleteTrial(false);
             return;
         }
 
-
+        RecordFrame(t, progress, radialDist, currentTunnel.WorldToTunnelLocal(ballPos,armCalibration.insertionZone).x, currentTunnel.WorldToTunnelLocal(ballPos, armCalibration.insertionZone).y, allowedRadius, inside);
+        currentTrial.travelledPath += Vector3.Distance(ballPos, prevBallPos);
+        prevBallPos = ballPos;
+        if (t >= 0.999f)
+            CompleteTrial(true);
 
         //if (!experiementDone)
         //{
@@ -398,8 +412,173 @@ public class Recorder : MonoBehaviour
 
     }
 
+    void RecordFrame(float t, float progressL, float radialDist, float lat, float depth, float allowedRadius, bool inside) //lat is up and down, depth is left right (if looking from front)
+    {
+        float dist = Vector3.Distance(ballTransform.position, prevBallPos);
+        float speed = Time.deltaTime > 0f ? dist / Time.deltaTime : 0f;
+        currentTrial.frames.Add(new FrameData
+        {
+            timestamp = Time.time - currentTrial.startTime,
+            deltaTime = Time.deltaTime,
+            ballPosition = ballTransform.position,
+            tunnelT = t, //normalized progress
+            tunnelL = progressL, //actual length progress
+            radialDistance = radialDist,
+            allowedRadius = allowedRadius,
+            ballLateralOffset = lat,
+            ballDepthOffset = depth,
+            normalizedOffset = allowedRadius > 0f ? radialDist / allowedRadius : 0f,
+            normDepthOffset = allowedRadius > 0f ? depth / allowedRadius : 0f,
+            normLatOffset = allowedRadius > 0f ? lat / allowedRadius : 0f,
+            isInsideTunnel = inside,
+            speed = speed,
+            distanceTravelled = dist
+        });
+    }
+
+    void ComputeSummaryStats(TrialData trial)
+    {
+        if (trial.FrameCount == 0) return;
+        int n = trial.FrameCount;
+        float totalTravel = 0f;
+        
+        float sumSpeed = 0f;
+        float sumLatO = 0f;
+        float sumDepthO = 0f;
+        float sumRadO = 0f;
+        float sumLatO_norm = 0f;
+        float sumDepthO_norm = 0f;
+        float sumRadO_norm = 0f;
+
+
+        foreach (var f in trial.frames)
+        {
+            sumSpeed += f.speed;
+            sumLatO += f.ballLateralOffset;
+            sumDepthO += f.ballDepthOffset;
+            sumRadO += f.radialDistance;
+            totalTravel += f.distanceTravelled;
+            sumLatO_norm += f.normLatOffset;
+            sumDepthO_norm += f.normDepthOffset;
+            sumRadO_norm += f.normalizedOffset;
+        }
+
+        trial.speed = sumSpeed / n;
+        trial.latOffset = sumLatO / n;
+        trial.depthOffset = sumDepthO / n;
+        trial.radialOffset = sumRadO / n;
+        trial.n_depthOffset = sumDepthO_norm / n;
+        trial.n_latOffset = sumLatO_norm / n;
+        trial.n_radialOffset = sumRadO_norm / n;
+        // standard deviations
+
+        float sumSqSpeed = 0f;
+        float sumSqLatO = 0f;
+        float sumSqDepthO = 0f;
+        float sumSqBivar = 0f;
+        float sumSqRadO = 0f;
+        float sumSqLatO_norm = 0f;
+        float sumSqDepthO_norm = 0f;
+        float sumSqBivar_norm = 0f;
+        float sumSqRadO_norm = 0f;
+
+
+        foreach (var f in trial.frames)
+        {
+            float dSpeed = f.speed - trial.speed;
+            float dLat = f.ballLateralOffset - trial.latOffset;
+            float dDepth = f.ballDepthOffset - trial.depthOffset;
+            float dRad = f.radialDistance - trial.radialOffset;
+            float dLat_norm = f.normLatOffset - trial.n_latOffset;
+            float dDepth_norm = f.normDepthOffset - trial.n_depthOffset;
+            float dRad_norm = f.normalizedOffset - trial.n_radialOffset;
+
+            sumSqSpeed += dSpeed * dSpeed;
+            sumSqLatO += dLat * dLat;
+            sumSqDepthO += dDepth * dDepth;
+            sumSqRadO += dRad * dRad;
+            sumSqLatO_norm += dLat_norm * dLat_norm;
+            sumSqDepthO_norm += dDepth_norm * dDepth_norm;
+            sumSqRadO_norm += dRad_norm * dRad_norm;
+
+            // bivariate
+            sumSqBivar += dLat * dLat + dDepth * dDepth;
+            sumSqBivar_norm += dLat_norm * dLat_norm + dDepth_norm * dDepth_norm;
+        }
+
+        // Sample standard deviation (n - 1)
+        float denom = n > 1 ? n - 1 : 1;
+        trial.sdSpeed = Mathf.Sqrt(sumSqSpeed / denom);
+        trial.sdLatOffset = Mathf.Sqrt(sumSqLatO / denom);
+        trial.sdDepthOffset = Mathf.Sqrt(sumSqDepthO / denom);
+        trial.sdBivariate = Mathf.Sqrt(sumSqBivar / denom);
+        trial.sdRadialOffset = Mathf.Sqrt(sumSqRadO / denom);
+        trial.effectiveAmplitude = totalTravel;
+        trial.sd_nDepthOffset = Mathf.Sqrt(sumSqDepthO_norm / denom);
+        trial.sd_nLatOffset = Mathf.Sqrt(sumSqLatO_norm / denom);
+        trial.sd_nRadOffset = Mathf.Sqrt(sumSqRadO_norm / denom);
+        trial.sdBivariate_norm = Mathf.Sqrt(sumSqBivar_norm / denom);
+
+
+    }
+
+    void SaveTrialCSV(TrialData trial)
+    {
+        string folderPath = Path.Combine(Application.dataPath, "Captured Data");
+
+        // Create folder if it doesn't exist
+        if (!Directory.Exists(folderPath))
+        {
+            Directory.CreateDirectory(folderPath);
+        }
+
+        string path = Path.Combine(
+            folderPath,
+            $"{ParticipantNumber}_trial_{trial.trialIndex:00}_{trial.config.ID}.csv"
+        );
+        string cond_name = "narrow";
+        if (trial.config.startWidth < trial.config.endWidth) cond_name = "wide";
+
+        using var sw = new StreamWriter(path);
+        sw.WriteLine("paricipantID,index,startW,endW,length,condition,direction,timestamp,deltaTime,speed,distance," +
+                     "posX,posY,posZ,localX,localY,localZ," +
+                     "tunnelT,tunnelL,latOffset,normLatO,depthOffset,normDepthO,radialDist,allowedRadius,normalizedOffset(rad),inside"); //tunnel t is normalized tunnel l which is progress in m
+
+        foreach (var f in trial.frames)
+        {
+            sw.WriteLine(
+            $"{ParticipantNumber},{trial.config.trialIndex},{trial.config.startWidth},{trial.config.endWidth},{trial.config.pathLength},{cond_name},{trial.config.direction}," +
+            $"{f.timestamp},{f.deltaTime},{f.speed},{f.distanceTravelled}," +
+            $"{f.ballPosition.x},{f.ballPosition.y},{f.ballPosition.z},{currentTunnel.WorldToTunnelLocal(f.ballPosition, armCalibration.insertionZone).x},{currentTunnel.WorldToTunnelLocal(f.ballPosition, armCalibration.insertionZone).y},{currentTunnel.WorldToTunnelLocal(f.ballPosition, armCalibration.insertionZone).z}," +
+            $"{f.tunnelT},{f.tunnelL},{f.ballLateralOffset},{f.normLatOffset},{f.ballDepthOffset},{f.normDepthOffset},{f.radialDistance},{f.allowedRadius}," +
+            $"{f.normalizedOffset},{f.isInsideTunnel}");
+        }
+
+    }
+
+    void AppendTrialToSummaryCSV(TrialData trial)
+    {
+        string cond_name = "narrow";
+        if (trial.config.startWidth < trial.config.endWidth) cond_name = "wide";
+
+        Vector2 angleOffset = AngleOffset();
+
+        using var sw = new StreamWriter(summaryPath, append: true); // append mode
+        sw.WriteLine(
+            $"{ParticipantNumber},{leftHanded},{trial.trialIndex},{trial.config.ID}," +
+            $"{trial.config.pathLength},{trial.config.startWidth}," +
+            $"{trial.config.endWidth},{trial.config.direction},{cond_name}," +
+            $"{trial.Duration},{trial.HitNumber},{trial.hitTime},{trial.Duration - trial.hitTime},{trial.speed},{trial.sdSpeed}," +
+            $"{trial.latOffset},{trial.sdLatOffset},{trial.n_latOffset},{trial.sd_nLatOffset}," +
+            $"{trial.depthOffset},{trial.sdDepthOffset},{trial.n_depthOffset},{trial.sd_nDepthOffset}," +
+            $"{trial.radialOffset},{trial.sdRadialOffset},{trial.n_radialOffset},{trial.sd_nRadOffset}," +
+            $"{trial.effectiveAmplitude},{trial.completed},{trial.sdBivariate},{trial.sdBivariate_norm}," +
+            $"{trial.FrameCount},{angleOffset.x},{angleOffset.y}");
+    }
+
     void CompleteTrial(bool success)
     {
+        pointer_reset = false;
         studyActive = false;
         isSteering = false;
         steeringSW.Stop();
@@ -407,7 +586,9 @@ public class Recorder : MonoBehaviour
         steeringSW.Reset();
         currentTrial.endTime = Time.time;
         currentTrial.completed = success;
-    
+        
+
+
         if (success)
         {
             AudioSource.PlayClipAtPoint(success_sound, Camera.main.transform.position);
@@ -416,11 +597,10 @@ public class Recorder : MonoBehaviour
         else
             AudioSource.PlayClipAtPoint(error_sound, Camera.main.transform.position);
 
-        //TODO: ComputeSummaryStats(currentTrial);
-        //allTrials.Add(currentTrial);
-        //TODO: AppendTrialToSummaryCSV(currentTrial);
+        ComputeSummaryStats(currentTrial);
+        AppendTrialToSummaryCSV(currentTrial);
 
-        //TODO: SaveTrialCSV(currentTrial);
+        SaveTrialCSV(currentTrial);
         UnityEngine.Debug.Log($"[Study] Trial {currentTrial.trialIndex} complete. " +
                   $"Resets: {currentTrial.resetCount}  " +
                   $"Duration: {currentTrial.Duration:F2}s");
@@ -443,13 +623,13 @@ public class Recorder : MonoBehaviour
         );
 
         using var sw = new StreamWriter(summaryPath, append: false); // overwrite if exists
-        sw.WriteLine("participantID,rightHanded,index,ID," +
+        sw.WriteLine("participantID,leftHanded,index,ID," +
                      "pathLength,startWidth,endWidth,direction,condition," +
                      "time,hitNum,hitTime,pureTime,speed(mean),speed(sd)," +
                      "latOffset(mean),latOffset(sd),normLatOffset(mean),normLatOffset(sd)," +
                      "depthOffset(mean),depthOffset(sd),normDepthOffset(mean),normDepthOffset(sd)," +
                      "radialOffset(mean),radialOffset(sd),normRadialOffset(mean),normRadialOffset(sd)," +
-                     "Ae,success,SDbivariate,normSDbivariate,frameCount");
+                     "Ae,success,SDbivariate,normSDbivariate,frameCount,X_angleOffset,Y_angleOffset");
     }
 
     void BuildTrialList()
@@ -520,6 +700,7 @@ public class Recorder : MonoBehaviour
 
         isSteering = false;
         studyActive = true;
+        insertPoint.GetComponent<Renderer>().material = pointerMaterial;
     }
 
 }

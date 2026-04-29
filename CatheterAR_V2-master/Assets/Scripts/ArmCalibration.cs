@@ -375,6 +375,8 @@ public class ArmCalibration : MonoBehaviour
             controllerVisual,
             recorder.leftHanded
         );
+
+        recorder.ballTransform = recorder.pointer;
     }
 
     public void StartText(string text)

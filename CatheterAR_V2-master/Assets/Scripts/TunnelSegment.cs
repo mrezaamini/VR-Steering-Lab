@@ -16,14 +16,14 @@ public struct TunnelSegment
     /// radialDist   — distance from axis at ball position
     /// allowedRadius— interpolated tunnel radius at t
     /// </returns>
-    public (bool inside, float t, float progressL, float radialDist, float lateralOffset, float depthOffset, float allowedRadius)
+    public (bool inside, float t, float progressL, float radialDist, float allowedRadius)
     Evaluate(Vector3 ballPos)
     {
         Vector3 axis = endPoint - startPoint;
         float axisLen = axis.magnitude;
 
         if (axisLen < Mathf.Epsilon)
-            return (false, 0f, 0f, 0f, 0f, 0f, 0f);
+            return (false, 0f, 0f, 0f, 0f);
 
         Vector3 axisDir = axis / axisLen;
 
@@ -33,17 +33,23 @@ public struct TunnelSegment
         Vector3 closestOnAxis = startPoint + axisDir * (tClamped * axisLen);
         float radialDist = Vector3.Distance(ballPos, closestOnAxis);
         float allowedRadius = Mathf.Lerp(startRadius, endRadius, tClamped);
-        // Tunnel is always horizontal (left/right axis) so:
-        // upDir    = world up    (Vector3.up)
-        // depthDir = world depth (Vector3.forward)
-        Vector3 offsetVec = ballPos - closestOnAxis;
-        float vOffset = Vector3.Dot(offsetVec, Vector3.up);
-        float dOffset = Vector3.Dot(offsetVec, Vector3.forward);
-
+        
 
         // t must be in (0,1) — ball outside the caps is considered out
         bool inside = (t >= 0f) && (radialDist <= allowedRadius);
 
-        return (inside, tClamped, l, radialDist,vOffset, dOffset, allowedRadius);
+        return (inside, tClamped, l, radialDist, allowedRadius);
     }
+
+
+    public Vector3 WorldToTunnelLocal(Vector3 worldPos, Transform insertionPoint)
+    {
+        Vector3 delta = worldPos - startPoint;
+        float z = Vector3.Dot(delta, insertionPoint.forward);
+        float x = Vector3.Dot(delta, insertionPoint.up);
+        float y = Vector3.Dot(delta, insertionPoint.right);
+        return new Vector3(x, y, z); //x: up down, y: left right, z progress
+    }
+
+
 }
