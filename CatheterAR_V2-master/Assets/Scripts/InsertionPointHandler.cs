@@ -9,6 +9,7 @@ public class InsertionPointHandler : MonoBehaviour
     public GameObject syringeLeft;
     public GameObject syringeRight;
     public Material successMaterial;
+    public Material normMaterial;
 
     void Start()
     {
@@ -26,6 +27,17 @@ public class InsertionPointHandler : MonoBehaviour
         if(other.gameObject.tag == "Pointer" && syringe.activeSelf)
         {
             GetComponent<Renderer>().material = successMaterial;
+            //Invoke("StopDisplayAngle", 2f);
+
+        }
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+
+        if (other.gameObject.tag == "Pointer" && syringe.activeSelf)
+        {
+            GetComponent<Renderer>().material = normMaterial;
             //Invoke("StopDisplayAngle", 2f);
 
         }

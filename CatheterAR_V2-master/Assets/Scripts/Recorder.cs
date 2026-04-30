@@ -55,7 +55,7 @@ public class Recorder : MonoBehaviour
 
     public SphereInsert sphereInsert;
 
-    public string ParticipantNumber;
+    public int ParticipantNumber;
     public bool leftHanded;
     public bool isNurse;
 
@@ -65,9 +65,9 @@ public class Recorder : MonoBehaviour
 
     private Stopwatch steeringSW;
     private string summaryPath;
-    private float[] pathLengths = {0.1f};
-    private float[] startWidths = { 0.02f,0.08f };
-    private float[] endWidths = {0.01f};
+    private float[] pathLengths = { 0.1f, 0.2f };
+    private float[] startWidths = { 0.02f, 0.04f, 0.08f };
+    private float[] endWidths = { 0.01f };
 
     private List<TrialConfig> trialList = new List<TrialConfig>();
     private int currentTrialIndex = 0;
@@ -92,6 +92,7 @@ public class Recorder : MonoBehaviour
     public float interTrialDelay = 1f;
     private bool pointer_reset = false;
 
+
     // Start is called before the first frame update
     void Start()
     {
@@ -107,7 +108,7 @@ public class Recorder : MonoBehaviour
             syringe = syringeRight;
             pointer = pointerRight;
         }
-            
+
         assistanceActivated = true;
 
         steeringSW = new Stopwatch();
@@ -117,79 +118,7 @@ public class Recorder : MonoBehaviour
 
 
         calibrationPoints = new Transform[6];
-        string FileName = ParticipantNumber + "_" + DateTime.Now.ToString("h-mm-ss") + ".txt";
-        FilePathAll = Application.dataPath + "/DataCollection/All/All_" + FileName;
-        FilePathSummary = Application.dataPath + "/DataCollection/Summary/Summary_" + FileName;
-        FilePathCollider = Application.dataPath + "/DataCollection/Collider/ColliderArea_" + FileName;
 
-        string message = "ParticipantNumber; " +
-            "Nurse; " +
-            "Click Counter; " +
-            "Left Handed; " +
-            "Assistance Activated; " +
-            "Controller Position; " +
-            "Pointer Position; " +
-            "Camera Position; " +
-            "Target Position; " +
-            "Calibration Point Position 1; " +
-            "Calibration Point Position 2; " +
-            "Calibration Point Position 3; " +
-            "Calibration Point Position 4; " +
-            "Calibration Point Position 5; " +
-            "Calibration Point Position 6; " +
-            "Syringe angle x; " +
-            "Syringe angle y; " +
-            "Syringe angle z; " +
-            "Angle Offset X ; " +
-            "Angle Offset Y ; " +
-            "Distance b/w Syringe and Insert position; " +
-            "Is Inside; " +
-            "Selection Collider; " +
-            "Recorder Collider; " +
-            "Total Time; " +
-            "Time Seconds; " +
-            "Time Milliseconds; ";
-
-        using (StreamWriter sw = File.AppendText(FilePathSummary))
-        {
-            sw.WriteLine(message);
-        }
-
-        message = "ParticipantNumber; " +
-            "Nurse; " +
-            "Click Counter; " +
-            "Assistance Activated; " +
-            "Controller Position; " +
-            "Pointer Position; " +
-            "Target Position; " +
-            "Is Inside; " +
-            "Total Time; ";
-        using (StreamWriter sw = File.AppendText(FilePathAll))
-        {
-            sw.WriteLine(message);
-        }
-
-        message = "ParticipantNumber; " +
-            "Nurse; " +
-            "Click Counter; " +
-            "Assistance Activated; " +
-            "Controller Position; " +
-            "Pointer Position; " +
-            "Target Position; " +
-            "Syringe angle x; " +
-            "Syringe anfle y; " +
-            "Syringe angle z; " +
-            "Accuracy x; " +
-            "Accuracy y; " +
-            "isInside; " +
-            "Distance b/w Syringe and Insert position; " +
-            "Total Time; ";
-
-        // distance between syringe and target
-        using (StreamWriter sw = File.AppendText(FilePathCollider))
-        {
-            sw.WriteLine(message);
-        }
     }
 
     public void StartText(string text)
@@ -203,7 +132,7 @@ public class Recorder : MonoBehaviour
     }
 
 
-    public void SetParticipantNumber(string participantNumber)
+    public void SetParticipantNumber(int participantNumber)
     {
         this.ParticipantNumber = participantNumber;
     }
@@ -213,16 +142,13 @@ public class Recorder : MonoBehaviour
         assistanceActivated = assistance;
     }
 
-    //public void SetVisualGuides()
-    //{
-    //    activateVisualGuides = FindObjectOfType<ActivateVisualGuides>();
-    //}
+
 
     public Vector2 AngleOffset()
     {
         // x is up(+) and down (-). y is left(+) and right (-)
         Vector3 syringeForward = syringe.transform.forward;
-        Vector3 targetForward = armCalibration.insertionZone.forward; 
+        Vector3 targetForward = armCalibration.insertionZone.forward;
 
         float x = Vector3.SignedAngle(Vector3.ProjectOnPlane(targetForward, Vector3.right),
                                        Vector3.ProjectOnPlane(syringeForward, Vector3.right),
@@ -234,78 +160,82 @@ public class Recorder : MonoBehaviour
         return new Vector2(x, y);
     }
 
-    public void summaryWriter()
-    {
-        clickCounter++;
-        Vector2 offset = AngleOffset();
-        if (!training)
-        {
-            string message = ParticipantNumber + ";" +
-            isNurse + ";" +
-            clickCounter + ";" +
-            leftHanded + ";" +
-            assistanceActivated + ";" +
-            controller.position + ";" +
-            pointer.position + ";" +
-            camera.position + ";" +
-            //target.position + ";" +
-            calibrationPoints[0].position.ToString() + ";" +
-            calibrationPoints[1].position.ToString() + ";" +
-            calibrationPoints[2].position.ToString() + ";" +
-            calibrationPoints[3].position.ToString() + ";" +
-            calibrationPoints[4].position.ToString() + ";" +
-            calibrationPoints[5].position.ToString() + ";" +
-            syringe.transform.eulerAngles.x + ";" +
-            syringe.transform.eulerAngles.y + ";" + 
-            syringe.transform.eulerAngles.z + ";" +
-            offset.x + ";" + 
-            offset.y + ";" +
-            sphereInsert.distance + ";" +
-            isInside + ";" +
-            selectionCollider.position + ";" +
-            recorderCollider.position + ";" +
-            Time.time + ";" +
-            (Time.time - previousTime) + ";" +
-            (Time.time - previousTime) * 1000;
+    //public void summaryWriter()
+    //{
+    //    clickCounter++;
+    //    Vector2 offset = AngleOffset();
+    //    if (!training)
+    //    {
+    //        string message = ParticipantNumber + ";" +
+    //        isNurse + ";" +
+    //        clickCounter + ";" +
+    //        leftHanded + ";" +
+    //        assistanceActivated + ";" +
+    //        controller.position + ";" +
+    //        pointer.position + ";" +
+    //        camera.position + ";" +
+    //        //target.position + ";" +
+    //        calibrationPoints[0].position.ToString() + ";" +
+    //        calibrationPoints[1].position.ToString() + ";" +
+    //        calibrationPoints[2].position.ToString() + ";" +
+    //        calibrationPoints[3].position.ToString() + ";" +
+    //        calibrationPoints[4].position.ToString() + ";" +
+    //        calibrationPoints[5].position.ToString() + ";" +
+    //        syringe.transform.eulerAngles.x + ";" +
+    //        syringe.transform.eulerAngles.y + ";" + 
+    //        syringe.transform.eulerAngles.z + ";" +
+    //        offset.x + ";" + 
+    //        offset.y + ";" +
+    //        sphereInsert.distance + ";" +
+    //        isInside + ";" +
+    //        selectionCollider.position + ";" +
+    //        recorderCollider.position + ";" +
+    //        Time.time + ";" +
+    //        (Time.time - previousTime) + ";" +
+    //        (Time.time - previousTime) * 1000;
 
-            previousTime = Time.time;
+    //        previousTime = Time.time;
 
-            using (StreamWriter sw = File.AppendText(FilePathSummary))
-            {
-                sw.WriteLine(message);
-            }
-        }
-        if(clickCounter == 0)
-        {
-            StartText("Training session");
-            Invoke("StopText", 4f);
-        }
-        if(clickCounter == 10)
-        {
-            training = false;
-            //activateVisualGuides.SetActivation(assistanceActivated);
-            StartText("Experiement starting: Trial 1 :: visual guides: " + assistanceActivated);
-            Invoke("StopText", 4f);
-        }
-        
-        if(clickCounter == 32)
-        {
-            experiementDone = true;
-            text.enabled = true;
-            Time.timeScale = 0;
-        }
-    }
+    //        using (StreamWriter sw = File.AppendText(FilePathSummary))
+    //        {
+    //            sw.WriteLine(message);
+    //        }
+    //    }
+    //    if(clickCounter == 0)
+    //    {
+    //        StartText("Training session");
+    //        Invoke("StopText", 4f);
+    //    }
+    //    if(clickCounter == 10)
+    //    {
+    //        training = false;
+    //        //activateVisualGuides.SetActivation(assistanceActivated);
+    //        StartText("Experiement starting: Trial 1 :: visual guides: " + assistanceActivated);
+    //        Invoke("StopText", 4f);
+    //    }
+
+    //    if(clickCounter == 32)
+    //    {
+    //        experiementDone = true;
+    //        text.enabled = true;
+    //        Time.timeScale = 0;
+    //    }
+    //}
 
     // Update is called once per frame
     void Update()
     {
-        if (!armCalibration.CalibrationDone) return;
+        if (!armCalibration.CalibrationDone)
+        {
+            StartText("Calbration");
+            return;
+        }
         if (!studyActive) return;
 
         Vector3 ballPos = pointer.position;
         var (inside, t, progress, radialDist, allowedRadius) = currentTunnel.Evaluate(ballPos);
 
-        
+
         if (!isSteering)
         {
             if (!pointer_reset && !inside)
@@ -320,17 +250,17 @@ public class Recorder : MonoBehaviour
                 if (ballProg < -0.05f)
                 {
                     pointer_reset = true;
-                    StartText("GO!");
+                    StartText("Insert!");
                 }
             }
-            
-            if (pointer_reset && inside && t>=0)
+
+            if (pointer_reset && inside && t >= 0)
             {
                 isSteering = true;
                 steeringSW.Restart();
                 prevBallPos = ballPos;
                 UnityEngine.Debug.Log($"[Study] Trial {currentTrialIndex} — steering started.");
-                StartText("Steering Started!");
+                StartText("Inserting...");
             }
 
             return;
@@ -338,11 +268,12 @@ public class Recorder : MonoBehaviour
 
         if (!inside)
         {
+            StartText("Try Again!");
             CompleteTrial(false);
             return;
         }
 
-        RecordFrame(t, progress, radialDist, currentTunnel.WorldToTunnelLocal(ballPos,armCalibration.insertionZone).x, currentTunnel.WorldToTunnelLocal(ballPos, armCalibration.insertionZone).y, allowedRadius, inside);
+        RecordFrame(t, progress, radialDist, currentTunnel.WorldToTunnelLocal(ballPos, armCalibration.insertionZone).x, currentTunnel.WorldToTunnelLocal(ballPos, armCalibration.insertionZone).y, allowedRadius, inside);
         currentTrial.travelledPath += Vector3.Distance(ballPos, prevBallPos);
         prevBallPos = ballPos;
         if (t >= 0.999f)
@@ -441,7 +372,7 @@ public class Recorder : MonoBehaviour
         if (trial.FrameCount == 0) return;
         int n = trial.FrameCount;
         float totalTravel = 0f;
-        
+
         float sumSpeed = 0f;
         float sumLatO = 0f;
         float sumDepthO = 0f;
@@ -586,7 +517,7 @@ public class Recorder : MonoBehaviour
         steeringSW.Reset();
         currentTrial.endTime = Time.time;
         currentTrial.completed = success;
-        
+
 
 
         if (success)
@@ -634,30 +565,60 @@ public class Recorder : MonoBehaviour
 
     void BuildTrialList()
     {
-        int idx = 0;
-        for (int rep = 0; rep < repetitions; rep++)
-            foreach (var length in pathLengths)
-                foreach (var sw in startWidths)
-                    foreach (var ew in endWidths)
-                        {
-                            trialList.Add(new TrialConfig
-                            {
-                                trialIndex = idx++,
-                                pathLength = length,
-                                startWidth = sw,
-                                endWidth = ew
-                            });
-                        }
+        List<Vector3> trial_temp = new List<Vector3>();
 
+        foreach (var length in pathLengths)
+            foreach (var sw in startWidths)
+                foreach (var ew in endWidths)
+                {
+                    trial_temp.Add(new Vector3(length, sw, ew));
+                }
+        int cb_index = 0;
         if (randomizeOrder)
-            trialList.Shuffle();
+        {
+            //trialList.Shuffle();
+            cb_index = ParticipantNumber % 6;
+        }
+        int idx = 0;
+
+        for(int i = 0; i < repetitions; i++)
+        {
+            for(int j = cb_index; j < trial_temp.Count; j++)
+            {
+                trialList.Add(new TrialConfig
+                {
+                    trialIndex = idx++,
+                    pathLength = trial_temp[j].x,
+                    startWidth = trial_temp[j].y,
+                    endWidth = trial_temp[j].z
+                }) ;
+            }
+            for(int j = 0; j < cb_index; j++)
+            {
+                trialList.Add(new TrialConfig
+                {
+                    trialIndex = idx++,
+                    pathLength = trial_temp[j].x,
+                    startWidth = trial_temp[j].y,
+                    endWidth = trial_temp[j].z
+                });
+            }
+
+        }
 
         // Re-stamp indices to reflect final presentation order
-        for (int i = 0; i < trialList.Count; i++)
-            trialList[i].trialIndex = i;
+        //for (int i = 0; i < trialList.Count; i++)
+        //    trialList[i].trialIndex = i;
 
         UnityEngine.Debug.Log($"[Study] {trialList.Count} trials generated.");
+        foreach(var ti in trialList)
+        {
+            UnityEngine.Debug.Log($"Trial {ti.trialIndex} : sw-{ti.startWidth}, ew-{ti.endWidth}, l-{ti.pathLength}");
+        }
     }
+
+
+
     void EndStudy()
     {
         studyActive = false;

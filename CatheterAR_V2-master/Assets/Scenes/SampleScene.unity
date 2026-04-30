@@ -1026,7 +1026,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: hi
+  m_text: Welcome
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -10625,6 +10625,7 @@ MonoBehaviour:
   syringeLeft: {fileID: 1503081082}
   syringeRight: {fileID: 924470610}
   successMaterial: {fileID: 2100000, guid: 8fc444a09a955064587c4b1ff7fc0a86, type: 2}
+  normMaterial: {fileID: 0}
 --- !u!1 &1737837366
 GameObject:
   m_ObjectHideFlags: 0
@@ -11000,7 +11001,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   radialSegments: 32
-  tunnelMaterial: {fileID: 2100000, guid: 871d9e08fc03ce7479ed46f6eb1b4905, type: 2}
+  doubleSided: 1
+  tunnelMaterial: {fileID: 2100000, guid: 1477e19f2dcb39c43bd29974863b1cbf, type: 2}
+  useThreePartMaterials: 0
+  firstThirdMaterial: {fileID: 2100000, guid: 1477e19f2dcb39c43bd29974863b1cbf, type: 2}
+  secondThirdMaterial: {fileID: 2100000, guid: 4fa9027b1399df3459b1f0a4cc890fc7, type: 2}
+  finalThirdMaterial: {fileID: 2100000, guid: d5880ea9603c8a84c9020afafc40c6a7, type: 2}
+  addBoundaryRings: 0
+  boundaryMaterial: {fileID: 2100000, guid: 4b9c56bfbf7d1794abf900664bb81378, type: 2}
+  boundaryWidth: 0.002
   currentTunnelGO: {fileID: 0}
 --- !u!4 &1782830929
 Transform:
@@ -12110,7 +12119,7 @@ MonoBehaviour:
   selectionCollider: {fileID: 332374521}
   recorderCollider: {fileID: 569427486}
   sphereInsert: {fileID: 0}
-  ParticipantNumber: 21
+  ParticipantNumber: 19
   leftHanded: 0
   isNurse: 0
   armCalibration: {fileID: 170180680}
