@@ -7091,8 +7091,8 @@ MonoBehaviour:
   tunnelBuilder: {fileID: 1636096128}
   ballController: {fileID: 341271292}
   startButton: {fileID: 870367043}
-  success_sound: {fileID: 8300000, guid: 6c18dd76dfbe7d84781999f7a05a78bb, type: 3}
-  error_sound: {fileID: 8300000, guid: 7d140901250504c4a9a2d21c26dc5e03, type: 3}
+  success_sound: {fileID: 8300000, guid: d941d99de9556d54fb06efc6ccc57531, type: 3}
+  error_sound: {fileID: 8300000, guid: 121dd589e8a3bb94a9d7b5df91529ab1, type: 3}
   interTrialDelay: 1.5
   UI_Debug: {fileID: 1000558022}
 --- !u!1 &1165171682

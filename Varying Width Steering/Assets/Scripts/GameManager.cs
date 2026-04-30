@@ -9,8 +9,8 @@ public class GameManager : MonoBehaviour
     // Inspector
     // -------------------------------------------------------------------------
     private float[] pathLengths = { 0.1f ,0.2f, 0.4f };
-    private float[] startWidths = { 0.02f };
-    private float[] endWidths = { 0.08f };
+    private float[] startWidths = { 0.02f,0.04f, 0.08f };
+    private float[] endWidths = { 0.02f, 0.04f, 0.08f };
     private MovementDirection[] directions = { MovementDirection.LeftToRight,
                                                   MovementDirection.RightToLeft };
     private int repetitions = 5;
@@ -199,31 +199,79 @@ public class GameManager : MonoBehaviour
 
     void BuildTrialList()
     {
-        int idx = 0;
-        for (int rep = 0; rep < repetitions; rep++)
-            foreach (var length in pathLengths)
-                foreach (var sw in startWidths)
-                    foreach (var ew in endWidths)
-                        foreach (var dir in directions)
-                        {
-                            trialList.Add(new TrialConfig
-                            {
-                                trialIndex = idx++,
-                                pathLength = length,
-                                startWidth = sw,
-                                endWidth = ew,
-                                direction = dir
-                            });
-                        }
+        List<Vector3> narrow_temp = new List<Vector3>();
+        List<Vector3> wide_temp = new List<Vector3>();
+        foreach (var length in pathLengths)
+            foreach (var sw in startWidths)
+                foreach (var ew in endWidths)
+                {
+                    if (sw > ew)
+                    {
+                        narrow_temp.Add(new Vector3(length, sw, ew));
+                    }
+                    if (sw < ew)
+                    {
+                        wide_temp.Add(new Vector3(length, sw, ew));
+                    }
+                }
 
+
+        int cb_index = 0;
         if (randomizeOrder)
-            trialList.Shuffle();
+        {
+            //trialList.Shuffle();
+            cb_index = participantID % 4;
+        }
 
-        // Re-stamp indices to reflect final presentation order
-        for (int i = 0; i < trialList.Count; i++)
-            trialList[i].trialIndex = i;
+        List<(Vector3 pathConfig, MovementDirection mdConfig)> trial_temp = new List<(Vector3, MovementDirection)>();
+        foreach(var md in directions)
+        {
+            foreach(var nPath in narrow_temp)
+            {
+                trial_temp.Add((nPath,md));
+            }
+        }
+        foreach (var md in directions)
+        {
+            foreach (var wPath in wide_temp)
+            {
+                trial_temp.Add((wPath, md));
+            }
+        }
+        int idx = 0;
+        for (int i = 0; i < repetitions; i++)
+        {
+            for (int j = cb_index; j < trial_temp.Count; j++)
+            {
+                trialList.Add(new TrialConfig
+                {
+                    trialIndex = idx++,
+                    pathLength = trial_temp[j].pathConfig.x,
+                    startWidth = trial_temp[j].pathConfig.y,
+                    endWidth = trial_temp[j].pathConfig.z,
+                    direction = trial_temp[j].mdConfig
+
+                });
+            }
+            for (int j = 0; j < cb_index; j++)
+            {
+                trialList.Add(new TrialConfig
+                {
+                    trialIndex = idx++,
+                    pathLength = trial_temp[j].pathConfig.x,
+                    startWidth = trial_temp[j].pathConfig.y,
+                    endWidth = trial_temp[j].pathConfig.z,
+                    direction = trial_temp[j].mdConfig
+                });
+            }
+
+        }
 
         UnityEngine.Debug.Log($"[Study] {trialList.Count} trials generated.");
+        foreach (var ti in trialList)
+        {
+            UnityEngine.Debug.Log($"Trial {ti.trialIndex} : sw-{ti.startWidth}, ew-{ti.endWidth}, l-{ti.pathLength}, d-{ti.direction}");
+        }
     }
 
     // -------------------------------------------------------------------------
