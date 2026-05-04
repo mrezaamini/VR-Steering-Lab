@@ -10625,7 +10625,7 @@ MonoBehaviour:
   syringeLeft: {fileID: 1503081082}
   syringeRight: {fileID: 924470610}
   successMaterial: {fileID: 2100000, guid: 8fc444a09a955064587c4b1ff7fc0a86, type: 2}
-  normMaterial: {fileID: 0}
+  normMaterial: {fileID: 2100000, guid: 5f562f851af61b24ba5d3dc84a215197, type: 2}
 --- !u!1 &1737837366
 GameObject:
   m_ObjectHideFlags: 0
@@ -12119,7 +12119,7 @@ MonoBehaviour:
   selectionCollider: {fileID: 332374521}
   recorderCollider: {fileID: 569427486}
   sphereInsert: {fileID: 0}
-  ParticipantNumber: 19
+  ParticipantNumber: 0
   leftHanded: 0
   isNurse: 0
   armCalibration: {fileID: 170180680}
@@ -12129,6 +12129,7 @@ MonoBehaviour:
   success_sound: {fileID: 8300000, guid: 4580cefe49a4c9349969382324319d35, type: 3}
   error_sound: {fileID: 8300000, guid: a5b484752d450d5449c0a05eb5a52f42, type: 3}
   interTrialDelay: 1
+  error_tunnel_material: {fileID: 2100000, guid: 02350438167ce024b9b8fa6f4c3d06db, type: 2}
 --- !u!4 &1950660961
 Transform:
   m_ObjectHideFlags: 0
