@@ -91,6 +91,8 @@ public class Recorder : MonoBehaviour
     public AudioClip error_sound;
     public float interTrialDelay = 1f;
     private bool pointer_reset = false;
+    public Material error_tunnel_material;
+
 
 
     // Start is called before the first frame update
@@ -526,7 +528,11 @@ public class Recorder : MonoBehaviour
             currentTrialIndex++;
         }
         else
+        {
             AudioSource.PlayClipAtPoint(error_sound, Camera.main.transform.position);
+            Renderer tunnel_renderer = tunnelBuilder.currentTunnelGO.GetComponent<Renderer>();
+            tunnel_renderer.material = error_tunnel_material;
+        }
 
         ComputeSummaryStats(currentTrial);
         AppendTrialToSummaryCSV(currentTrial);
@@ -623,6 +629,7 @@ public class Recorder : MonoBehaviour
     {
         studyActive = false;
         UnityEngine.Debug.Log("[Study] All trials finished.");
+        StartText("Done!");
     }
 
     

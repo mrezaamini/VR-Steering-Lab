@@ -2324,7 +2324,7 @@ SphereCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Radius: 0.5
+  m_Radius: 1
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!23 &341271295
 MeshRenderer:
@@ -7093,7 +7093,7 @@ MonoBehaviour:
   startButton: {fileID: 870367043}
   success_sound: {fileID: 8300000, guid: d941d99de9556d54fb06efc6ccc57531, type: 3}
   error_sound: {fileID: 8300000, guid: 121dd589e8a3bb94a9d7b5df91529ab1, type: 3}
-  interTrialDelay: 1.5
+  interTrialDelay: 1
   UI_Debug: {fileID: 1000558022}
 --- !u!1 &1165171682
 GameObject:

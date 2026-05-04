@@ -105,11 +105,12 @@ public class GameManager : MonoBehaviour
             // Lateral distance from the task axis
             Vector3 closestOnAxis = ballStartPos + taskAxisDir * forwardDisplacement;
             float distToAxis = Vector3.Distance(ballPos, closestOnAxis);
+            var (b_inside, b_t, b_progress, b_radialDist, b_verticalOffset, b_depthOffset, b_allowedRadius) = currentTunnel.Evaluate(ballPos);
 
             bool enteredPath = forwardDisplacement >= 0.05f;         // >=5 cm forward
-            bool withinBoundary = distToAxis <= currentTunnel.startRadius;
+            bool withinBoundary = b_inside && b_allowedRadius>= b_radialDist && b_t <= 0.1f;
 
-            UI_Debug.updateText("enteredPath:"+enteredPath+" withinBoundary:"+withinBoundary+" dis:"+ forwardDisplacement+ " distToAx:"+distToAxis);
+            //UI_Debug.updateText("enteredPath:"+enteredPath+" withinBoundary:"+withinBoundary+" dis:"+ forwardDisplacement+ " distToAx:"+distToAxis);
 
             if (enteredPath && withinBoundary)
             {
@@ -133,12 +134,14 @@ public class GameManager : MonoBehaviour
         // Active steering 
         //inside, tClamped, l, radialDist,vOffset, dOffset, allowedRadius
         var (inside, t, progress, radialDist, verticalOffset, depthOffset, allowedRadius) = currentTunnel.Evaluate(ballPos);
-        UI_Debug.updateText("inside:"+inside+" t:"+t+" distance:"+radialDist+" allowed:"+allowedRadius);
+        //UI_Debug.updateText("inside:"+inside+" t:"+t+" distance:"+radialDist+" allowed:"+allowedRadius);
         if (!inside)
         {
             //currentTrial.resetCount++;
             //ResetBallToStart();
+            UI_Debug.updateText("Try Again!");
             CompleteTrial(false);
+            
             return;
         }
 
@@ -150,6 +153,8 @@ public class GameManager : MonoBehaviour
             boundaryContactFlag = true;
             Renderer tunnel_renderer = tunnelBuilder.currentTunnelGO.GetComponent<Renderer>();
             tunnel_renderer.material = error_tunnel_material;
+            AudioSource.PlayClipAtPoint(error_sound, Camera.main.transform.position);
+
             currentTrial.HitNumber++;
             contactSW.Restart();
         }
@@ -170,7 +175,11 @@ public class GameManager : MonoBehaviour
         prevBallPos = ballPos;
 
         if (t >= 0.999f)
+        {
+            UI_Debug.updateText("Complete");
             CompleteTrial(true);
+        }
+           
     }
 
     public void startExperiment()
@@ -189,7 +198,7 @@ public class GameManager : MonoBehaviour
        scenePosition = startPos + cameraForward*0.35f + Vector3.down*0.15f;
        
         calibrationStatus = true;
-        currentTrialIndex++;
+        currentTrialIndex=0;
         StartNextTrial();
     }
 
@@ -285,6 +294,7 @@ public class GameManager : MonoBehaviour
             EndStudy();
             return;
         }
+       
 
         var cfg = trialList[currentTrialIndex];
         UnityEngine.Debug.Log("CFG: start:" + cfg.startWidth + " end:" + cfg.endWidth + " len:" + cfg.pathLength);
@@ -315,6 +325,7 @@ public class GameManager : MonoBehaviour
         boundaryContactFlag = false;
 
         UnityEngine.Debug.Log($"[Study] Trial {currentTrialIndex} — {cfg.ID}");
+        UI_Debug.updateText("Go");
     }
 
     void ResetBallToStart()
@@ -372,6 +383,7 @@ public class GameManager : MonoBehaviour
     void EndStudy()
     {
         //SaveSummaryCSV();
+        UI_Debug.updateText("Done!");
         UnityEngine.Debug.Log("[Study] All trials finished.");
     }
 
